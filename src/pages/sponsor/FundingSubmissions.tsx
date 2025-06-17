@@ -14,6 +14,8 @@ import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {DataTableFunding} from "@/components/data-table-funding.tsx";
 import PageTitle from "@/components/page-title.tsx";
+import {Link} from "react-router";
+import {dateTimeFormat} from "@/lib/utils.ts";
 
 const PENDING = "pending";
 const APPROVED = "approved";
@@ -55,7 +57,7 @@ const columns: ColumnDef<FundingSubmission>[] = [
 
             return (
                 <div className={"text-center"}>
-                    <Badge variant={badgeVariant}>{status}</Badge>
+                    <Badge variant={badgeVariant} className={"capitalize"}>{status}</Badge>
                 </div>
             )
         }
@@ -73,23 +75,17 @@ const columns: ColumnDef<FundingSubmission>[] = [
         accessorKey: "date_requested",
         header: "Date Requested",
         cell: ({ row }) => {
-            const date = new Date(row.getValue("date_requested"))
-            const formatted = new Intl.DateTimeFormat("en-UK", {
-                year: "numeric",
-                month: "long",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-            }).format(date)
-
-            return <div>{formatted}</div>
+            const date = row.getValue("date_requested") as string
+            return <div>{dateTimeFormat(date)}</div>
         }
     },
     {
         id: "actions",
         header: () => <div className={"text-center"}>Actions</div>,
         enableHiding: false,
-        cell: () => {
+        cell: ({row}) => {
+            const fundingSubmission = row.original;
+
             return (
                 <DropdownMenu>
                     <div className={"flex justify-center items-center"}>
@@ -101,7 +97,11 @@ const columns: ColumnDef<FundingSubmission>[] = [
                         </DropdownMenuTrigger>
                     </div>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Detail</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link to={`/sponsor/funding/view/${fundingSubmission.uuid}`}>
+                                View Detail
+                            </Link>
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             );
@@ -123,6 +123,7 @@ function FundingSubmissions() {
 
             try {
                 const response = await axiosPrivate.get(`/v1/funding-submissions/sponsor/${auth.uuid}`);
+                if (!(response.status === 200)) throw new Error(`API Error: ${response.status}`);
                 console.log("Funding Submissions: " + response.data);
                 setData(response.data);
             } catch (error) {
@@ -134,7 +135,7 @@ function FundingSubmissions() {
         };
 
         fetchFundingSubmissions()
-    }, []);
+    }, [axiosPrivate, auth.uuid]);
 
     return (
         <div className={"space-y-8"}>

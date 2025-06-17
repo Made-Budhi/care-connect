@@ -35,13 +35,13 @@ export function Login({className, ...props}: React.ComponentPropsWithoutRef<"for
                     navigate('/sponsor/children');
                     break;
                 case 'stuart':
-                    navigate('/stuart/children');
+                    navigate('/stuart/funding');
                     break;
                 case 'school':
                     navigate('/school/children');
                     break;
                 case 'admin':
-                    navigate('/admin/users');
+                    navigate('/admin/children');
                     break;
                 default:
                     // If role is not recognized, redirect to unauthorized page

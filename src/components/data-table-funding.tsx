@@ -8,8 +8,10 @@ import {
 import {useState} from "react";
 import {ListFilter, Plus} from "lucide-react";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
-import {Button} from "@/components/ui/button.tsx";
+import {Button, buttonVariants} from "@/components/ui/button.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
+import {Link} from "react-router";
+import useAuth from "@/hooks/useAuth.tsx";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -17,6 +19,7 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTableFunding<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+    const {auth} = useAuth();
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
     const table = useReactTable({
@@ -34,10 +37,12 @@ export function DataTableFunding<TData, TValue>({ columns, data }: DataTableProp
         <div className={"space-y-3"}>
             <section id="filtering-section" className={"flex gap-2"}>
                 {/*Add a new submission button*/}
-                <Button className={"bg-white border text-cc-primary border-cc-primary hover:text-white"} variant={"ccbutton"}>
-                    <Plus />
-                    <p>NEW</p>
-                </Button>
+                {auth.role === 'sponsor' && (
+                    <Link to={"/sponsor/funding/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>
+                        <Plus />
+                        <p>NEW</p>
+                    </Link>
+                )}
 
                 {/*Filtering section*/}
                 <Popover>

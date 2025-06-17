@@ -18,6 +18,7 @@ import useAuth from "@/hooks/useAuth.tsx";
 import {DataTableChildren} from "@/components/data-table-children.tsx";
 import {Link} from "react-router";
 import PageTitle from "@/components/page-title.tsx";
+import {dateFormat} from "@/lib/utils.ts";
 
 const title = "Foster Child List"
 const breadcrumbs = [
@@ -68,14 +69,8 @@ const columns: ColumnDef<Child>[] = [
         accessorKey: "dateOfBirth",
         header: "Date of Birth",
         cell: ({ row }) => {
-            const date = new Date(row.getValue("birthdate"))
-            const formatted = new Intl.DateTimeFormat("en-UK", {
-                year: "numeric",
-                month: "long",
-                day: "2-digit"
-            }).format(date)
-
-            return <div>{formatted}</div>
+            const date = row.getValue("birthdate") as string;
+            return <div>{dateFormat(date)}</div>
         }
     },
     {
@@ -99,8 +94,12 @@ const columns: ColumnDef<Child>[] = [
                         <DropdownMenuItem asChild>
                             <Link to={`/sponsor/children/view/${children.uuid}`}>View Detail</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>View Achievement</DropdownMenuItem>
-                        <DropdownMenuItem>View Report Card</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link to={`/sponsor/children/${children.uuid}/achievements`}>View Achievement</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link to={`/sponsor/children/${children.uuid}/report-cards`}>View Report Card</Link>
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             );
@@ -123,6 +122,7 @@ function ChildrenList() {
 
             try {
                 const response = await axiosPrivate.get(`/v1/sponsor/${auth.uuid}/children`);
+                if (!(response.status === 200)) throw new Error(`API Error: ${response.status}`);
                 setData(response.data);
             } catch (error) {
                 console.error(error);
@@ -133,7 +133,7 @@ function ChildrenList() {
         };
 
         fetchChildren()
-    }, []);
+    }, [axiosPrivate, auth.uuid]);
 
     return (
         <div className={"space-y-8"}>
