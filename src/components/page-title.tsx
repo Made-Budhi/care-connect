@@ -5,6 +5,7 @@ import {
     BreadcrumbList,
     BreadcrumbSeparator
 } from "@/components/ui/breadcrumb.tsx";
+import React from "react";
 
 interface Breadcrumbs {
     name?: string;
@@ -28,7 +29,7 @@ function PageTitle({title, breadcrumbs}: PageTitleProps) {
                     </BreadcrumbItem>
 
                     {breadcrumbs.map((item, index) => (
-                        <>
+                        <React.Fragment key={index}>
                             <BreadcrumbSeparator>/</BreadcrumbSeparator>
 
                             <BreadcrumbItem>
@@ -37,7 +38,7 @@ function PageTitle({title, breadcrumbs}: PageTitleProps) {
                                     {item.name}
                                 </BreadcrumbLink>
                             </BreadcrumbItem>
-                        </>
+                        </React.Fragment>
                     ))}
                 </BreadcrumbList>
             </Breadcrumb>

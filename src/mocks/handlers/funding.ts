@@ -1,133 +1,161 @@
-// src/mocks/fundingSubmissionHandlers.ts
-import {http, HttpResponse, type HttpHandler, delay} from 'msw';
+// src/mocks/fundingAndPaymentHandlers.ts
+import {http, HttpResponse, type HttpHandler} from 'msw';
 
 // Helper to validate bearer token
-// (This would typically be in a shared authentication utility file)
 const validateBearerToken = (request: Request): { userId: string | number, token: string } | null => {
     const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null; // No token or incorrect scheme
-    }
-
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
     const token = authHeader.split(' ')[1];
-
-    if (!token) {
-        return null; // Token is empty
-    }
-    // For mock purposes, any non-empty token is considered valid.
-    // In a real scenario, you'd decode and verify the JWT.
-    return { userId: 'mock-sponsor-789', token }; // Example mock user ID for a sponsor
+    if (!token) return null;
+    return { userId: 'mock-admin-789', token };
 };
 
-// Interface for the criteria used to match children for funding
+// Helper function to format a Date object into SQL DATETIME string 'YYYY-MM-DD HH:MM:SS'
+const toSqlDateTime = (date: Date): string => {
+    const pad = (num: number) => (num < 10 ? '0' : '') + num;
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+// --- INTERFACES ---
+
 interface ChildrenCriteria {
-    grade?: string; // e.g., "Grade 5", "10th Grade"
-    age?: number;
-    name?: string; // To match a specific child's name (if known)
-    school?: string; // Name of the school the child attends
+    grade?: string; age?: number; name?: string; school?: string;
 }
 
-// Possible statuses for a funding submission
 type FundingStatus = 'pending' | 'rejected' | 'approved';
+type PaymentStatus = 'pending' | 'rejected' | 'approved';
 
-// Data structure for the list view of funding submissions
-// sponsorUuid is removed as per user request for this specific list item view
 interface FundingSubmissionListItem {
     uuid: string;
     status: FundingStatus;
-    date_requested: string; // ISO date string, e.g., "2024-07-15T10:30:00Z"
-    period: number; // Funding period in years
+    date_requested: string;
+    period: number;
 }
 
-// Data structure for the detailed view of a funding submission
-// This interface still contains sponsorUuid as it's for the detailed view
 interface FundingSubmissionDetail extends FundingSubmissionListItem {
     sponsorUuid: string;
     childrenCriteria: ChildrenCriteria;
-    notes?: string; // Optional notes from the sponsor about this submission
-    rejectionReason?: string; // Optional, populated if status is 'rejected'
-    approvalDate?: string; // Optional, populated if status is 'approved' (ISO date string)
+    foster_child_uuid?: string;
+    notes?: string;
+    rejectionReason?: string;
+    approvalDate?: string;
+    approved_by?: string;
+
+    payment_link?: string;
 }
 
-// In-memory "database" for our mock funding submissions
+interface PaymentProof {
+    uuid: string;
+    submissionUuid: string;
+    imagePath: string;
+    dateUploaded: string;
+    status: PaymentStatus;
+}
+
+// --- MOCK DATABASES ---
+
+const sponsorsDB = [
+    { uuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k', name: 'Jonathan Johnson' },
+];
+
 let fundingSubmissionsDB: FundingSubmissionDetail[] = [
     {
         uuid: 'fs-alpha-001',
         sponsorUuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k',
         status: 'pending',
-        date_requested: '2025-02-12 16:02:00',
+        date_requested: '2025-05-12 16:02:00',
         period: 1,
-        childrenCriteria: {
-            age: 7,
-            grade: 'Grade 2',
-            school: 'Northwood Elementary',
-        },
+        childrenCriteria: { age: 7, grade: 'Grade 2', school: 'Northwood Elementary' },
         notes: 'Request for Northwood Elementary 2nd grader.',
     },
     {
         uuid: 'fs-beta-002',
         sponsorUuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k',
         status: 'approved',
-        date_requested: '2025-06-03 23:02:00',
+        date_requested: '2025-04-03 23:02:00',
         period: 3,
-        childrenCriteria: {
-            name: 'Daniel Armstrong', // Example if sponsoring a known child
-            grade: '10th Grade',
-            school: 'Central High School',
-        },
-        notes: 'Approved for 3-year scholarship for a specific student.',
-        approvalDate: '2024-05-20T11:00:00Z',
+        childrenCriteria: { name: 'Emma Johnson' },
+        foster_child_uuid: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p', // MATCHED CHILD
+        notes: 'Approved for 3-year scholarship for Emma.',
+        approvalDate: '2025-04-20 11:00:00',
+        approved_by: 'admin-user-001',
+        payment_link: 'https://mock-payment-gateway.com/pay/fs-beta-002',
+    },
+    { // Approved, but no payment proof yet
+        uuid: 'fs-delta-004',
+        sponsorUuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k',
+        status: 'approved',
+        date_requested: '2025-06-01 10:00:00',
+        period: 1,
+        childrenCriteria: { grade: '5th Grade' },
+        foster_child_uuid: '2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q', // Noah Williams
+        notes: 'Approved, pending payment proof.',
+        approvalDate: '2025-06-05 14:00:00',
+        approved_by: 'admin-user-002',
+        payment_link: 'https://mock-payment-gateway.com/pay/fs-delta-004',
     },
     {
         uuid: 'fs-gamma-003',
         sponsorUuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k',
         status: 'rejected',
-        date_requested: '2024-06-08 13:02:00',
+        date_requested: '2025-02-08 13:02:00',
         period: 2,
-        childrenCriteria: {
-            age: 15,
-            school: 'Southside Vocational',
-        },
+        childrenCriteria: { age: 15, school: 'Southside Vocational' },
         rejectionReason: 'Budget constraints for the current cycle.',
         notes: 'Request for vocational training support at Southside.',
     },
 ];
 
-const sponsors = [
+const paymentProofsDB: PaymentProof[] = [
     {
-        uuid: '1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k',
-        submissions: ['fs-gamma-003', 'fs-beta-002', 'fs-alpha-001']
-    },
-    {
-        uuid: '3x4w5v6u-7t8s-9r0q-1p2o-3n4m5l6k7j8i',
-        submissions: []
+        uuid: 'pp-uuid-001',
+        submissionUuid: 'fs-beta-002', // Linked to the approved submission
+        imagePath: '/files/proofs/payment-proof-fs-beta-002.jpg',
+        dateUploaded: '2025-04-22 09:30:00',
+        status: 'pending',
     }
 ];
 
-const customDelay = 1000
+const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const baseUrl = import.meta.env.VITE_API_URL;
+// --- HANDLERS ---
 
-// Define handlers for the Funding Submission API
-export const fundingSubmissionHandlers: HttpHandler[] = [
+const fundingSubmissionHandlers: HttpHandler[] = [
     /**
      * GET /v1/funding-submissions
      * Get all funding submissions (summary list view).
-     * Returns items matching FundingSubmissionListItem (without sponsorUuid).
      */
-    http.get(`${baseUrl}/v1/funding-submissions`, async ({request}) => {
-        const authResult = validateBearerToken(request as unknown as Request);
-        if (!authResult) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized: Bearer token is missing or invalid.'}),
-                {status: 401, headers: { 'Content-Type': 'application/json' }}
-            );
-        }
+    http.get(`${baseUrl}/v1/funding-submissions`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
 
-        const listItems: FundingSubmissionListItem[] = fundingSubmissionsDB.map(fs => ({
+        const listItems: FundingSubmissionListItem[] = fundingSubmissionsDB.map(fs => {
+            const sponsor = sponsorsDB.find(s => s.uuid === fs.sponsorUuid);
+            return {
+                uuid: fs.uuid,
+                sponsorName: sponsor ? sponsor.name : 'Unknown Sponsor',
+                status: fs.status,
+                date_requested: fs.date_requested,
+                period: fs.period,
+            };
+        });
+        return HttpResponse.json(listItems);
+    }),
+
+    /**
+     * GET /v1/funding-submissions/sponsor/:uuid
+     * Get funding submissions made by a specific sponsor.
+     */
+    http.get(`${baseUrl}/v1/funding-submissions/sponsor/:uuid`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid: sponsorUuid } = params;
+
+        const submissions = fundingSubmissionsDB.filter(fs => fs.sponsorUuid === sponsorUuid);
+
+        const listItems: FundingSubmissionListItem[] = submissions.map(fs => ({
             uuid: fs.uuid,
-            // sponsorUuid: fs.sponsorUuid, // Removed as per new FundingSubmissionListItem
             status: fs.status,
             date_requested: fs.date_requested,
             period: fs.period,
@@ -137,151 +165,206 @@ export const fundingSubmissionHandlers: HttpHandler[] = [
     }),
 
     /**
-     * GET /v1/funding-submissions/sponsor/:sponsorUuid
-     * Get funding submissions made by a specific sponsor (summary list view).
-     * Returns items matching FundingSubmissionListItem (without sponsorUuid).
-     */
-    http.get(`${baseUrl}/v1/funding-submissions/sponsor/:uuid`, async ({request, params}) => {
-        await delay(customDelay)
-
-        const authResult = validateBearerToken(request);
-        if (!authResult) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized: Bearer token is missing or invalid.'}),
-                {status: 401, headers: { 'Content-Type': 'application/json' }}
-            );
-        }
-
-        const {uuid} = params;
-        const sponsor = sponsors.find(sponsor => sponsor.uuid === uuid);
-
-        if (!sponsor) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Sponsor not found'}),
-                {status: 404}
-            );
-        }
-
-        const fundingSubmissions = fundingSubmissionsDB.filter(fundingSubmission =>
-            sponsor.submissions.includes(fundingSubmission.uuid)
-        );
-
-        // Return basic information for sponsored children
-        const basicFundingSubmissionsInfo = fundingSubmissions.map(fundingSubmission => ({
-            uuid: fundingSubmission.uuid,
-            status: fundingSubmission.status,
-            date_requested: fundingSubmission.date_requested,
-            period: fundingSubmission.period
-        }));
-
-        return HttpResponse.json(basicFundingSubmissionsInfo)
-    }),
-
-    /**
-     * GET /v1/funding-submissions/:submissionUuid
+     * GET /v1/funding-submissions/:uuid
      * Get a specific funding submission by its UUID (detailed version).
-     * Returns FundingSubmissionDetail which includes sponsorUuid.
      */
-    http.get(`${baseUrl}/v1/funding-submissions/:submissionUuid`, async ({request, params}) => {
-        const authResult = validateBearerToken(request as unknown as Request);
-        if (!authResult) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized: Bearer token is missing or invalid.'}),
-                {status: 401, headers: { 'Content-Type': 'application/json' }}
-            );
-        }
+    http.get(`${baseUrl}/v1/funding-submissions/:uuid`, async ({request, params}) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
 
-        const {submissionUuid} = params;
-        const submission = fundingSubmissionsDB.find(fs => fs.uuid === submissionUuid);
+        const { uuid } = params;
+        const submission = fundingSubmissionsDB.find(fs => fs.uuid === uuid);
 
-        if (!submission) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Funding submission not found'}),
-                {status: 404, headers: { 'Content-Type': 'application/json' }}
-            );
-        }
+        if (!submission) return new HttpResponse(JSON.stringify({message: 'Not Found'}), {status: 404});
 
-        return HttpResponse.json(submission); // Returns the full FundingSubmissionDetail
+        return HttpResponse.json(submission);
     }),
 
     /**
      * POST /v1/funding-submissions
      * Add a new funding submission.
-     * Expects: sponsorUuid, period, childrenCriteria in the request body. Notes are optional.
      */
-    http.post(`${baseUrl}/v1/funding-submissions`, async ({request}) => {
-        const authResult = validateBearerToken(request as unknown as Request);
-        if (!authResult) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized: Bearer token is missing or invalid.'}),
-                {status: 401, headers: { 'Content-Type': 'application/json' }}
-            );
-        }
+    http.post(`${baseUrl}/v1/funding-submissions`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
 
-        let submissionData: {
-            sponsorUuid: string;
-            period: number;
-            childrenCriteria: ChildrenCriteria;
-            notes?: string;
-        };
+        const submissionData = await request.json() as Omit<FundingSubmissionDetail, 'uuid' | 'status' | 'date_requested'>;
 
-        try {
-            submissionData = await request.json() as typeof submissionData;
-        } catch (e) {
-            console.error(e)
-            return HttpResponse.json({ message: 'Invalid JSON body' }, { status: 400, headers: { 'Content-Type': 'application/json' }});
-        }
-
-        // Basic validation
-        if (!submissionData.sponsorUuid || typeof submissionData.period !== 'number' || !submissionData.childrenCriteria || typeof submissionData.childrenCriteria !== 'object') {
-            return HttpResponse.json({
-                message: 'Invalid request body. Required fields: sponsorUuid (string), period (number), childrenCriteria (object).'
-            }, { status: 400, headers: { 'Content-Type': 'application/json' } });
+        if (!submissionData.sponsorUuid || !submissionData.period || !submissionData.childrenCriteria) {
+            return HttpResponse.json({ message: 'sponsorUuid, period, and childrenCriteria are required.'}, { status: 400 });
         }
 
         const newSubmission: FundingSubmissionDetail = {
-            uuid: `fs-${crypto.randomUUID()}`, // Generate a unique UUID
-            sponsorUuid: submissionData.sponsorUuid,
+            uuid: `fs-${crypto.randomUUID()}`,
             status: 'pending',
-            date_requested: new Date().toISOString(),
-            period: submissionData.period,
-            childrenCriteria: submissionData.childrenCriteria,
-            notes: submissionData.notes,
+            date_requested: toSqlDateTime(new Date()),
+            ...submissionData
         };
-
         fundingSubmissionsDB.push(newSubmission);
 
-        // The POST response typically returns the created resource in its detailed form
-        return HttpResponse.json({
-            message: 'Funding submission added successfully',
-            submission: newSubmission // Returns FundingSubmissionDetail
-        }, {status: 201, headers: { 'Content-Type': 'application/json' }});
+        return HttpResponse.json({ message: 'Submission created successfully', submission: newSubmission }, { status: 201 });
     }),
 
     /**
-     * DELETE /v1/funding-submissions/:submissionUuid
-     * Delete a funding submission by its UUID.
+     * PATCH /v1/funding-submissions/:uuid/approve
+     * Approve a funding submission, requiring a payment link AND a matched child UUID.
      */
-    http.delete(`${baseUrl}/v1/funding-submissions/:submissionUuid`, async ({request, params}) => {
-        const authResult = validateBearerToken(request as unknown as Request);
-        if (!authResult) {
-            return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized: Bearer token is missing or invalid.'}),
-                {status: 401, headers: { 'Content-Type': 'application/json' }}
-            );
+    http.patch(`${baseUrl}/v1/funding-submissions/:uuid/approve`, async ({request, params}) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid } = params;
+        const body = await request.json() as { payment_link: string; foster_child_uuid: string };
+
+        if (!body.payment_link || !body.foster_child_uuid) {
+            return HttpResponse.json({ message: 'payment_link and foster_child_uuid are required for approval.' }, { status: 400 });
         }
 
-        const {submissionUuid} = params;
+        const submissionIndex = fundingSubmissionsDB.findIndex(fs => fs.uuid === uuid);
+        if (submissionIndex === -1) return new HttpResponse(JSON.stringify({message: 'Not Found'}), {status: 404});
+
+        const submission = fundingSubmissionsDB[submissionIndex];
+        submission.status = 'approved';
+        submission.payment_link = body.payment_link;
+        submission.foster_child_uuid = body.foster_child_uuid;
+        submission.approved_by = authResult.userId.toString();
+        submission.approvalDate = toSqlDateTime(new Date());
+        submission.rejectionReason = undefined;
+
+        return HttpResponse.json(submission);
+    }),
+
+    /**
+     * PATCH /v1/funding-submissions/:uuid/reject
+     * Reject a funding submission.
+     */
+    http.patch(`${baseUrl}/v1/funding-submissions/:uuid/reject`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid } = params;
+        const body = await request.json() as { rejectionReason?: string };
+        const submissionIndex = fundingSubmissionsDB.findIndex(fs => fs.uuid === uuid);
+        if (submissionIndex === -1) return new HttpResponse(JSON.stringify({message: 'Not Found'}), {status: 404});
+
+        const submission = fundingSubmissionsDB[submissionIndex];
+        submission.status = 'rejected';
+        submission.rejectionReason = body.rejectionReason || 'No reason provided.';
+        submission.foster_child_uuid = undefined;
+        submission.payment_link = undefined;
+        submission.approved_by = undefined;
+        submission.approvalDate = undefined;
+
+        return HttpResponse.json(submission);
+    }),
+
+    /**
+     * DELETE /v1/funding-submissions/:uuid
+     * Delete a funding submission.
+     */
+    http.delete(`${baseUrl}/v1/funding-submissions/:uuid`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid } = params;
         const initialLength = fundingSubmissionsDB.length;
-        fundingSubmissionsDB = fundingSubmissionsDB.filter(fs => fs.uuid !== submissionUuid);
+        fundingSubmissionsDB = fundingSubmissionsDB.filter(fs => fs.uuid !== uuid);
 
         if (fundingSubmissionsDB.length < initialLength) {
-            return new Response(null, { status: 204 });
+            return new Response(null, { status: 204 }); // Success, no content
+        }
+        return new HttpResponse(JSON.stringify({ message: 'Not Found' }), { status: 404 });
+    }),
+];
+
+const paymentProofHandlers: HttpHandler[] = [
+    /**
+     * GET /v1/payment-proofs
+     * Get a list of all payment proofs with combined information.
+     */
+    http.get(`${baseUrl}/v1/payment-proofs`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const paymentProofList = paymentProofsDB.map(proof => {
+            const submission = fundingSubmissionsDB.find(fs => fs.uuid === proof.submissionUuid);
+            return {
+                paymentProofUuid: proof.uuid, // Pass the proof's own UUID for actions
+                childrenUuid: submission?.foster_child_uuid || null, // Get child UUID from submission
+                submissionUuid: proof.submissionUuid,
+                paymentStatus: proof.status,
+                dateUploaded: proof.dateUploaded,
+            };
+        });
+
+        return HttpResponse.json(paymentProofList);
+    }),
+
+    /**
+     * NEW ENDPOINT
+     * GET /v1/payment-proofs/submission/:submissionUuid
+     * Get the payment proof for a single submission. Returns 404 if not found.
+     */
+    http.get(`${baseUrl}/v1/payment-proofs/submission/:submissionUuid`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { submissionUuid } = params;
+        const proof = paymentProofsDB.find(p => p.submissionUuid === submissionUuid);
+
+        if (proof) {
+            return HttpResponse.json(proof);
         } else {
-            return new HttpResponse(
-                JSON.stringify({message: 'Funding submission not found'}),
-                {status: 404, headers: { 'Content-Type': 'application/json' }}
-            );
+            // A 404 is the correct response to signal that the proof doesn't exist yet.
+            return new HttpResponse(JSON.stringify({ message: 'Payment proof not found' }), { status: 404 });
         }
     }),
+
+    /**
+     * POST /v1/payment-proofs
+     * Upload a new payment proof for a submission.
+     */
+    http.post(`${baseUrl}/v1/payment-proofs`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const body = await request.json() as { submissionUuid: string; imagePath: string };
+
+        if (!body.submissionUuid || !body.imagePath) {
+            return HttpResponse.json({ message: 'submissionUuid and imagePath are required.' }, { status: 400 });
+        }
+
+        const submission = fundingSubmissionsDB.find(fs => fs.uuid === body.submissionUuid);
+        if (!submission || submission.status !== 'approved') {
+            return HttpResponse.json({ message: 'Payment proof can only be uploaded for approved submissions.' }, { status: 403 });
+        }
+
+        // Prevent duplicate proofs in mock DB
+        const existingProofIndex = paymentProofsDB.findIndex(p => p.submissionUuid === body.submissionUuid);
+        if(existingProofIndex > -1) {
+            paymentProofsDB.splice(existingProofIndex, 1);
+        }
+
+        const newProof: PaymentProof = {
+            uuid: `pp-${crypto.randomUUID()}`,
+            submissionUuid: body.submissionUuid,
+            imagePath: body.imagePath,
+            dateUploaded: toSqlDateTime(new Date()),
+            status: 'pending',
+        };
+
+        paymentProofsDB.push(newProof);
+
+        return HttpResponse.json({
+            message: 'Payment proof uploaded successfully.',
+            paymentProof: newProof,
+        }, { status: 201 });
+    }),
+];
+
+
+// Export a combined array of all handlers for MSW setup
+export const fundingAndPaymentHandlers = [
+    ...fundingSubmissionHandlers,
+    ...paymentProofHandlers,
 ];

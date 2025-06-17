@@ -1,7 +1,18 @@
 import {delay, http, HttpResponse} from 'msw';
+import useAuth from "@/hooks/useAuth.tsx";
+
+// Interface for the User entity
+interface User {
+    uuid: string;
+    name: string;
+    email: string;
+    password: string;
+    role: 'admin' | 'school' | 'sponsor' | 'stuart';
+    isVerified: boolean;
+}
 
 // Mock data for users
-const users = [
+let users = [
     // Sponsor
     {
         uuid: "1z2y3x4w-5v6u-7t8s-9r0q-1p2o3n4m5l6k",
@@ -74,24 +85,14 @@ const generateJwtToken = (userId: string) => {
     return `${header}.${payload}.${signature}`;
 };
 
-// Helper to extract and validate bearer token
-const validateBearerToken = (request: Request) => {
+// Helper to validate bearer token
+// (This would typically be in a shared authentication utility file)
+const validateBearerToken = (request: Request): { userId: string | number, token:string } | null => {
     const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
     const token = authHeader.split(' ')[1];
-
-    // Check if a token exists in activeTokens
-    for (const [userId, userToken] of activeTokens.entries()) {
-        if (userToken === token) {
-            return { userId: userId, token };
-        }
-    }
-
-    return null;
+    if (!token) return null;
+    return { userId: 'mock-school-admin-1', token };
 };
 
 // Base Url from .env
@@ -396,5 +397,117 @@ export const authHandlers = [
             role: user.role,
             accessToken: newToken
         });
+    }),
+
+    /**
+     * GET /v1/users
+     * Get users, with an option to filter by role.
+     */
+    http.get(`${baseUrl}/v1/users`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const url = new URL(request.url);
+        const role = url.searchParams.get('role');
+
+        let user;
+
+        if (role) {
+            user = users.filter(user => user.role === role);
+        }
+
+        return HttpResponse.json(user);
+    }),
+
+    /**
+     * POST /v1/users
+     * Add a new user. For this example, we'll assume it's for creating Stuarts.
+     */
+    http.post(`${baseUrl}/v1/users`, async ({ request }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const newUserData = await request.json() as Omit<User, 'uuid' | 'role'> & { password?: string };
+
+        // Basic validation
+        if (!newUserData.name || !newUserData.email || !newUserData.password) {
+            return HttpResponse.json({ message: 'Name, email, and password are required.' }, { status: 400 });
+        }
+
+        // Check if email already exists
+        if (users.some(user => user.email === newUserData.email)) {
+            return HttpResponse.json({ message: 'An account with this email already exists.' }, { status: 409 }); // 409 Conflict
+        }
+
+        const newUser: User = {
+            uuid: `user-stuart-${crypto.randomUUID().slice(0, 8)}`,
+            name: newUserData.name,
+            email: newUserData.email,
+            role: 'stuart', // Hardcoding the role for this specific use case
+            isVerified: false,
+            password: newUserData.password,
+        };
+
+        users.push(newUser);
+        return HttpResponse.json({ message: 'Stuart user created successfully', user: newUser }, { status: 201 });
+    }),
+
+    /**
+     * DELETE /v1/users/:uuid
+     * Delete a user by their UUID.
+     */
+    http.delete(`${baseUrl}/v1/users/:uuid`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid } = params;
+        const initialLength = users.length;
+        users = users.filter(user => user.uuid !== uuid);
+
+        if (users.length < initialLength) {
+            return new Response(null, { status: 204 }); // Success, No Content
+        } else {
+            return new HttpResponse(JSON.stringify({ message: 'User not found' }), { status: 404 });
+        }
+    }),
+
+    /**
+     * GET /v1/users/me
+     * Fetches the profile of the currently authenticated user.
+     */
+    http.get(`${baseUrl}/v1/users/me`, async ({ request }) => {
+        const {auth} = useAuth();
+        const uuid = auth.uuid;
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const userProfile = users.find(user => user.uuid === uuid);
+        if (!userProfile) return new HttpResponse(JSON.stringify({ message: 'User profile not found' }), { status: 404 });
+
+        return HttpResponse.json(userProfile);
+    }),
+
+    /**
+     * PUT /v1/users/:uuid
+     * Updates a user's profile information.
+     */
+    http.put(`${baseUrl}/v1/users/:uuid`, async ({ request, params }) => {
+        const authResult = validateBearerToken(request);
+        if (!authResult) return new HttpResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+
+        const { uuid } = params;
+        // Security check: In a real app, you'd verify if the logged-in user is allowed to edit this profile.
+        // For this mock, we'll allow it if the UUID matches the token's user ID.
+        if (authResult.userId !== uuid) {
+            return new HttpResponse(JSON.stringify({ message: 'Forbidden' }), { status: 403 });
+        }
+
+        const updatedData = await request.json() as Partial<Omit<User, 'uuid' | 'role'>>;
+        const userIndex = users.findIndex(user => user.uuid === uuid);
+
+        if (userIndex === -1) return new HttpResponse(JSON.stringify({ message: 'User not found' }), { status: 404 });
+
+        users[userIndex] = { ...users[userIndex], ...updatedData };
+        return HttpResponse.json(users[userIndex]);
     }),
 ];

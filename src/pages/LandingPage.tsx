@@ -28,7 +28,7 @@ function LandingPage() {
                 navigate('/school/children');
                 break;
             case 'admin':
-                navigate('/admin/users');
+                navigate('/admin/children');
                 break;
             default:
                 // If the role is not recognized, redirect to unauthorized page

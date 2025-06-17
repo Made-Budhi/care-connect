@@ -79,7 +79,7 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                 <SidebarGroup key={"main-content"}>
                     <SidebarGroupContent className={"space-y-2"}>
                         {menus.map((menu) => (
-                            <SidebarMenu>
+                            <SidebarMenu key={menu.url}>
                                 <SidebarMenuItem key={menu.title}>
                                     <SidebarMenuButton className={"py-5 font-semibold"} asChild>
                                         <NavLink to={menu.url} end className={(location.pathname.startsWith(menu.url) ?
@@ -97,7 +97,7 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                 <SidebarGroup key={"secondary-content"} className={"mt-auto"}>
                     <SidebarGroupContent className={"space-y-2"}>
                         {secondaryMenu.map((menu) => (
-                            <SidebarMenu>
+                            <SidebarMenu key={menu.url}>
                                 <SidebarMenuItem key={menu.title}>
                                     <SidebarMenuButton className={"py-5 font-semibold"} asChild>
                                         <NavLink to={menu.url} end className={(location.pathname.startsWith(menu.url) ?
@@ -126,16 +126,18 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                 <Separator />
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" variant={"outline"}>
-                            <Avatar className="h-8 w-8 rounded-lg grayscale">
-                                <AvatarImage src={""} alt={auth.name}/>
-                                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-                            </Avatar>
+                        <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" variant={"outline"} asChild>
+                            <Link to={"/profile/me"}>
+                                <Avatar className="h-8 w-8 rounded-lg grayscale">
+                                    <AvatarImage src={""} alt={auth.name}/>
+                                    <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                                </Avatar>
 
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-medium">{auth.name}</span>
-                                <span className="truncate text-xs text-muted-foreground">{auth.email}</span>
-                            </div>
+                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                    <span className="truncate font-medium">{auth.name}</span>
+                                    <span className="truncate text-xs text-muted-foreground">{auth.email}</span>
+                                </div>
+                            </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
