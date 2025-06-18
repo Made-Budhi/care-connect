@@ -70,7 +70,7 @@ function LandingPage() {
                 <Link to="/program" className="hover:underline">Program</Link>
                 <Link to="/contact" className="hover:underline">Contact</Link>
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-4">
                 {auth.accessToken ? (
                     <>
                         <Button onClick={handleLogout}>Log Out</Button>
@@ -98,10 +98,28 @@ function LandingPage() {
                     <Link to="/about" className="hover:underline">About Us</Link>
                     <Link to="/program" className="hover:underline">Program</Link>
                     <Link to="/contact" className="hover:underline">Contact</Link>
+                    <div className="flex flex-col gap-2 mt-4">
+                        {auth.accessToken ? (
+                            <>
+                                <Button onClick={handleLogout}>Log Out</Button>
+                                <Button onClick={handleDashboard}>Dashboard</Button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to={"/register"} className={buttonVariants({ variant: "default" })}>Sign Up</Link>
+                                <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
+                                    <span className="relative z-10 bg-accent-foreground px-2 text-white">
+                                        Or 
+                                    </span>
+                                </div>
+                                <Link to={"/login"} className={buttonVariants({ variant: "default" })}>Login</Link>
+                            </>
+                        )}
+                    </div>
                 </nav>
             )}
         </header>
-        <main className="flex-grow">
+        <main className="flex-grow" onClick={() => setIsMobileMenuOpen(false)}>
             {/* Hero Section */}
             <section className="bg-cover bg-center text-white py-60 px-6" style={{ backgroundImage: "url('/pictures/hero-image.png')" }}>
                 <div className="max-w-4xl text-left pl-6">
