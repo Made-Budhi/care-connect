@@ -283,7 +283,7 @@ enableMocking().then(() => {
             <StrictMode>
                 <RouterProvider router={router}/>
                 <Toaster richColors />
-            </StrictMode>,
+            </StrictMode>
          </AuthProvider>
     )
 })
