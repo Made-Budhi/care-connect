@@ -15,7 +15,6 @@ import { Eye } from "lucide-react";
 
 const title = "Payment Proof Approval";
 const breadcrumbs = [
-    { name: "Dashboard", url: "/admin/dashboard" },
     { name: "Payment Proofs" },
 ];
 
