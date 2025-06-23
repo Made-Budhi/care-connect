@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {Button, buttonVariants} from "@/components/ui/button.tsx";
 import {Link, useNavigate} from "react-router";
+import {Link as ScrollLink} from "react-scroll";
 import Logo from "@/components/care-connect-logo.tsx";
 import useAuth from "@/hooks/useAuth.tsx";
 import useLogout from "@/hooks/useLogout.tsx";
@@ -59,16 +60,37 @@ function LandingPage() {
             </div>
         </div> */}
     <div className="min-h-screen flex flex-col">  
-        <header className="sticky top-0 bg-blue-800 text-white flex flex-wrap items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <header className="sticky top-0 z-50 bg-blue-800 text-white flex flex-wrap items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2">
                 <Logo />
             </div>
             <nav className="hidden sm:flex gap-4 md:gap-6 justify-center">
-                <Link to="/" className="hover:underline">Home</Link>
-                {/*<Link to="/dashboard" className="hover:underline">Dashboard</Link>*/}
-                <Link to="/" className="hover:underline">About Us</Link>
-                <Link to="/" className="hover:underline">Program</Link>
-                <Link to="/" className="hover:underline">Contact</Link>
+                <ScrollLink
+                    to="main"
+                    smooth={true}
+                    duration={500}
+                    className="hover:underline cursor-pointer"
+                >
+                    Home
+                </ScrollLink>
+                <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                <ScrollLink
+                    to="about"
+                    smooth={true}
+                    duration={500}
+                    className="hover:underline cursor-pointer"
+                >
+                    About
+                </ScrollLink>
+                <ScrollLink
+                    to="program"
+                    smooth={true}
+                    duration={500}
+                    className="hover:underline cursor-pointer"
+                >
+                    Program
+                </ScrollLink>
+                <Link to="/contact" className="hover:underline">Contact</Link>
             </nav>
             <div className="hidden sm:flex items-center gap-4">
                 {auth.accessToken ? (
@@ -93,11 +115,32 @@ function LandingPage() {
             {/* Mobile navigation dropdown */}
             {isMobileMenuOpen && (
                 <nav className="absolute top-full left-0 w-full bg-black/50 text-white flex flex-col gap-2 p-4 rounded z-50">
-                    <Link to="/" className="hover:underline">Home</Link>
-                    {/*<Link to="/" className="hover:underline">Dashboard</Link>*/}
-                    <Link to="/" className="hover:underline">About Us</Link>
-                    <Link to="/" className="hover:underline">Program</Link>
-                    <Link to="/" className="hover:underline">Contact</Link>
+                    <ScrollLink
+                        to="main"
+                        smooth={true}
+                        duration={500}
+                        className="hover:underline cursor-pointer"
+                    >
+                        Home
+                    </ScrollLink>
+                    <Link to="/dashboard" className="hover:underline">Dashboard</Link>
+                    <ScrollLink
+                        to="about"
+                        smooth={true}
+                        duration={500}
+                        className="hover:underline cursor-pointer"
+                    >
+                        About
+                    </ScrollLink>
+                    <ScrollLink
+                        to="program"
+                        smooth={true}
+                        duration={500}
+                        className="hover:underline cursor-pointer"
+                    >
+                        Program
+                    </ScrollLink>
+                    <Link to="/contact" className="hover:underline">Contact</Link>
                     <div className="flex flex-col gap-2 mt-4">
                         {auth.accessToken ? (
                             <>
@@ -106,13 +149,13 @@ function LandingPage() {
                             </>
                         ) : (
                             <>
-                                <Link to={"/register"} className={buttonVariants({ variant: "default" })}>Sign Up</Link>
-                                <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-                                    <span className="relative z-10 bg-accent-foreground px-2 text-white">
+                                <Link to={"/register"} className={buttonVariants({ variant: "secondary" })}>Sign Up</Link>
+                                <div className="relative text-center text-sm after:absolute after:inset-x-0 after:top-1/2 after:-translate-y-1/2 after:z-0 after:border-t after:border-border">
+                                    <span className="relative z-10 bg-accent-foreground/75 px-1 rounded-2xl text-white">
                                         Or
                                     </span>
                                 </div>
-                                <Link to={"/login"} className={buttonVariants({ variant: "default" })}>Login</Link>
+                                <Link to={"/login"} className={buttonVariants({ variant: "secondary" })}>Login</Link>
                             </>
                         )}
                     </div>
@@ -121,7 +164,7 @@ function LandingPage() {
         </header>
         <main className="flex-grow" onClick={() => setIsMobileMenuOpen(false)}>
             {/* Hero Section */}
-            <section className="bg-cover bg-center text-white py-60 px-6" style={{ backgroundImage: "url('/pictures/hero-image.png')" }}>
+            <section id="main" className="bg-cover bg-center text-white py-60 px-6" style={{ backgroundImage: "url('/pictures/hero-image.png')" }}>
                 <div className="max-w-4xl text-left pl-6">
                     <h1 className="text-4xl sm:text-5xl font-bold mb-6">Give Hope, Save Children's Future</h1>
                     <p className="text-lg sm:text-xl mb-8">
@@ -131,7 +174,7 @@ function LandingPage() {
             </section>
 
             {/* What We Do Section */}
-            <section className="py-16 px-6 bg-gray-100">
+            <section id="about" className="py-16 px-6 bg-gray-100">
                 <div className="max-w-6xl mx-auto">
                     {/* Content Row */}
                     <div className="flex flex-col sm:flex-row items-center gap-8 mb-12">
@@ -152,7 +195,7 @@ function LandingPage() {
                         </div>
                     </div>
                     {/* Features Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="flex flex-col items-center text-center">
                             <img src="/pictures/open-book.png" alt="Education" className="h-12 mb-4" />
                             <h3 className="font-bold text-lg">Education</h3>
@@ -178,7 +221,7 @@ function LandingPage() {
             </section>
 
             {/* Our Program Section */}
-            <section className="py-16 px-6">
+            <section id="program" className="py-16 px-6">
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-3xl font-bold mb-6">Our Program</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
