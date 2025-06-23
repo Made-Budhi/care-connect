@@ -96,13 +96,13 @@ function LandingPage() {
             <div className="hidden sm:flex items-center gap-4">
                 {auth.accessToken ? (
                     <>
-                        <Button onClick={handleLogout}>Log Out</Button>
-                        <Button onClick={handleDashboard}>Dashboard</Button>
+                        <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>Log Out</Button>
+                        <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
                     </>
                 ) : (
                     <>
-                        <Link to={"/register"} className={buttonVariants({ variant: "default" })}>Sign Up</Link>
-                        <Link to={"/login"} className={buttonVariants({ variant: "default" })}>Login</Link>
+                        <Link to={"/register"} className={buttonVariants({ variant: "secondary" })}>Sign Up</Link>
+                        <Link to={"/login"} className={buttonVariants({ variant: "secondary" })}>Login</Link>
                     </>
                 )}
             </div>
@@ -145,8 +145,13 @@ function LandingPage() {
                     <div className="flex flex-col gap-2 mt-4">
                         {auth.accessToken ? (
                             <>
-                                <Button onClick={handleLogout}>Log Out</Button>
-                                <Button onClick={handleDashboard}>Dashboard</Button>
+                                <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
+                                <div className="relative text-center text-sm after:absolute after:inset-x-0 after:top-1/2 after:-translate-y-1/2 after:z-0 after:border-t after:border-border">
+                                    <span className="relative z-10 bg-accent-foreground/75 px-1 rounded-2xl text-white">
+                                        Or
+                                    </span>
+                                </div>
+                                <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>Log Out</Button>
                             </>
                         ) : (
                             <>
