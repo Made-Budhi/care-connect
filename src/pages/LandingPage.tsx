@@ -59,16 +59,16 @@ function LandingPage() {
             </div>
         </div> */}
     <div className="min-h-screen flex flex-col">  
-        <header className="relative bg-blue-800 text-white flex flex-wrap items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <header className="sticky top-0 bg-blue-800 text-white flex flex-wrap items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2">
                 <Logo />
             </div>
             <nav className="hidden sm:flex gap-4 md:gap-6 justify-center">
                 <Link to="/" className="hover:underline">Home</Link>
-                <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-                <Link to="/about" className="hover:underline">About Us</Link>
-                <Link to="/program" className="hover:underline">Program</Link>
-                <Link to="/contact" className="hover:underline">Contact</Link>
+                {/*<Link to="/dashboard" className="hover:underline">Dashboard</Link>*/}
+                <Link to="/" className="hover:underline">About Us</Link>
+                <Link to="/" className="hover:underline">Program</Link>
+                <Link to="/" className="hover:underline">Contact</Link>
             </nav>
             <div className="hidden sm:flex items-center gap-4">
                 {auth.accessToken ? (
@@ -94,10 +94,10 @@ function LandingPage() {
             {isMobileMenuOpen && (
                 <nav className="absolute top-full left-0 w-full bg-black/50 text-white flex flex-col gap-2 p-4 rounded z-50">
                     <Link to="/" className="hover:underline">Home</Link>
-                    <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-                    <Link to="/about" className="hover:underline">About Us</Link>
-                    <Link to="/program" className="hover:underline">Program</Link>
-                    <Link to="/contact" className="hover:underline">Contact</Link>
+                    {/*<Link to="/" className="hover:underline">Dashboard</Link>*/}
+                    <Link to="/" className="hover:underline">About Us</Link>
+                    <Link to="/" className="hover:underline">Program</Link>
+                    <Link to="/" className="hover:underline">Contact</Link>
                     <div className="flex flex-col gap-2 mt-4">
                         {auth.accessToken ? (
                             <>
@@ -109,7 +109,7 @@ function LandingPage() {
                                 <Link to={"/register"} className={buttonVariants({ variant: "default" })}>Sign Up</Link>
                                 <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                                     <span className="relative z-10 bg-accent-foreground px-2 text-white">
-                                        Or 
+                                        Or
                                     </span>
                                 </div>
                                 <Link to={"/login"} className={buttonVariants({ variant: "default" })}>Login</Link>
