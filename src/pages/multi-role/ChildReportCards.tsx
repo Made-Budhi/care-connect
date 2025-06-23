@@ -53,6 +53,7 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
         {
             accessorKey: "grade",
             header: "Grade",
+            filterFn: "equals",
         },
         {
             accessorKey: "semester",
@@ -60,7 +61,8 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
             cell: ({ row }) => {
                 const semester = row.getValue("semester") as string;
                 return <div className="capitalize">{semester}</div>;
-            }
+            },
+            filterFn: "equals",
         },
         {
             accessorKey: "semesterDateStart",
