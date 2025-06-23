@@ -59,7 +59,8 @@ function ChildAchievements({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
                         {type}
                     </Badge>
                 );
-            }
+            },
+            filterFn: "equals",
         },
         {
             accessorKey: "date",

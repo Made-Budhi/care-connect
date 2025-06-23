@@ -6,12 +6,16 @@ import {
     useReactTable
 } from "@tanstack/react-table";
 import {useState} from "react";
-import {ListFilter, Plus} from "lucide-react";
+import {ListFilter, Plus, Search, X} from "lucide-react";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
 import {Button, buttonVariants} from "@/components/ui/button.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
 import useAuth from "@/hooks/useAuth.tsx";
 import {Link, useParams} from "react-router";
+import {Input} from "@/components/ui/input.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
+import {Separator} from "@/components/ui/separator.tsx";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -22,6 +26,8 @@ export function DataTableAchievement<TData, TValue>({ columns, data }: DataTable
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const {auth} = useAuth();
     const {uuid} = useParams()
+
+    const isFilterActive = (columnId: string) => !!table.getColumn(columnId)?.getFilterValue();
 
     const table = useReactTable({
         data,
@@ -47,6 +53,18 @@ export function DataTableAchievement<TData, TValue>({ columns, data }: DataTable
                 )}
 
                 {/*Filtering section*/}
+                <div className={"relative"}>
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-500" />
+                    <Input placeholder={"Search Achievement"}
+
+                           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+                           onChange={(event) => {
+                               table.getColumn("title")?.setFilterValue(event.target.value)
+                           }}
+
+                           className={"pl-10 bg-white"} />
+                </div>
+
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" className="bg-white border space-x-1">
@@ -55,9 +73,40 @@ export function DataTableAchievement<TData, TValue>({ columns, data }: DataTable
                         </Button>
                     </PopoverTrigger>
 
-                    {/* TODO: Implement filtering based on gender, school, and grade */}
-                    <PopoverContent>
-                        <p>Hi, this section is supposed to be filtering section.</p>
+                    <PopoverContent className={"space-y-8"}>
+                        <div className={"space-y-4"}>
+                            <div className="grid grid-cols-3 items-center gap-4">
+                                <Label htmlFor="type">Type</Label>
+                                <div className="col-span-2 relative">
+                                    <Select
+                                        value={(table.getColumn("achievementType")?.getFilterValue() as string) ?? ""}
+                                        onValueChange={(value) => {
+                                            const filterValue = value === "all" ? "" : value;
+                                            table.getColumn("achievementType")?.setFilterValue(filterValue);
+                                        }}
+                                    >
+                                        <SelectTrigger className="h-8 pr-8"><SelectValue placeholder="All Status" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Type</SelectItem>
+                                            <SelectItem value="academic">Academic</SelectItem>
+                                            <SelectItem value="non-academic">Non-Academic</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {isFilterActive("paymentStatus") && (
+                                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2" onClick={() => table.getColumn("status")?.setFilterValue("")}>
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Separator />
+                            <Button variant="link" size="sm" onClick={() => table.resetColumnFilters()} className="w-full">
+                                Reset All Filters
+                            </Button>
+                        </div>
                     </PopoverContent>
                 </Popover>
             </section>
