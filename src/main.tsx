@@ -147,25 +147,25 @@ const router = createBrowserRouter([
 
                             {path: "/stuart/children", element: <AllChildrenList />},
                             {path: "/stuart/children/:uuid", element: <ChildDetail breadcrumbs={[
-                                    {name: "Child List", url: "/stuart/children"},
+                                    {name: "Foster Child List", url: "/stuart/children"},
                                     {name: "Detail"}
                                 ]} />},
                             {path: "/stuart/children/:uuid/achievements", element: <ChildAchievements breadcrumbs={[
-                                    {name: "Child List", url: "/stuart/children"},
+                                    {name: "Foster Child List", url: "/stuart/children"},
                                     {name: "Achievements"},
                                 ]} />},
                             {path: "/stuart/children/achievements/:uuid", element: <AchievementDetail breadcrumbs={[
-                                    {name: "Child List", url: "/stuart/children"},
+                                    {name: "Foster Child List", url: "/stuart/children"},
                                     {name: "Achievements"},
                                     {name: "Detail"}
                                 ]} />},
 
                             {path: "/stuart/children/:uuid/report-cards", element: <ChildReportCards breadcrumbs={[
-                                    {name: "Child List", url: "/stuart/children"},
+                                    {name: "Foster Child List", url: "/stuart/children"},
                                     {name: "Report Cards"},
                                 ]} />},
                             {path: "/stuart/children/report-cards/:uuid", element: <ChildReportCards breadcrumbs={[
-                                    {name: "Child List", url: "/stuart/children"},
+                                    {name: "Foster Child List", url: "/stuart/children"},
                                     {name: "Report Cards"},
                                     {name: "Detail"}
                                 ]} />},
