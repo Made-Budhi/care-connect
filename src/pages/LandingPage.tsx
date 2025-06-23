@@ -73,7 +73,6 @@ function LandingPage() {
                 >
                     Home
                 </ScrollLink>
-                <Link to="/dashboard" className="hover:underline">Dashboard</Link>
                 <ScrollLink
                     to="about"
                     smooth={true}
@@ -90,7 +89,9 @@ function LandingPage() {
                 >
                     Program
                 </ScrollLink>
-                <Link to="/contact" className="hover:underline">Contact</Link>
+
+                {/*TODO: To be added:*/}
+                {/*<Link to="/contact" className="hover:underline">Contact</Link>*/}
             </nav>
             <div className="hidden sm:flex items-center gap-4">
                 {auth.accessToken ? (
