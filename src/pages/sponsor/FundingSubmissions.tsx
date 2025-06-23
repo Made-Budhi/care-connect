@@ -60,7 +60,8 @@ const columns: ColumnDef<FundingSubmission>[] = [
                     <Badge variant={badgeVariant} className={"capitalize"}>{status}</Badge>
                 </div>
             )
-        }
+        },
+        filterFn: "equals",
     },
     {
         id: "period",

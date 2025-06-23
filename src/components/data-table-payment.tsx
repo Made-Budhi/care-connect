@@ -6,25 +6,21 @@ import {
     useReactTable
 } from "@tanstack/react-table";
 import {useState} from "react";
-import {ListFilter, Plus, Search, X} from "lucide-react";
+import {ListFilter, X} from "lucide-react";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
-import {Button, buttonVariants} from "@/components/ui/button.tsx";
+import {Button} from "@/components/ui/button.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
-import useAuth from "@/hooks/useAuth.tsx";
-import {Link} from "react-router";
 import {Label} from "@/components/ui/label.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
-import {Input} from "@/components/ui/input.tsx";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
 }
 
-export function DataTableActivity<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTablePayment<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-    const {auth} = useAuth();
 
     const isFilterActive = (columnId: string) => !!table.getColumn(columnId)?.getFilterValue();
 
@@ -42,27 +38,6 @@ export function DataTableActivity<TData, TValue>({ columns, data }: DataTablePro
     return (
         <div className={"space-y-3"}>
             <section id="filtering-section" className={"flex gap-2"}>
-                {/*Add a new submission button*/}
-
-                {auth.role === 'sponsor' && (
-                    <Link to={"/sponsor/activities/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>
-                        <Plus />
-                        <p>NEW</p>
-                    </Link>
-                )}
-
-                <div className={"relative"}>
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-500" />
-                    <Input placeholder={"Search Activity"}
-
-                           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-                           onChange={(event) => {
-                               table.getColumn("title")?.setFilterValue(event.target.value)
-                           }}
-
-                           className={"pl-10 bg-white"} />
-                </div>
-
                 {/*Filtering section*/}
                 <Popover>
                     <PopoverTrigger asChild>
@@ -72,7 +47,7 @@ export function DataTableActivity<TData, TValue>({ columns, data }: DataTablePro
                         </Button>
                     </PopoverTrigger>
 
-                    <PopoverContent className={"space-y-8"}>
+                    <PopoverContent className="space-y-8">
                         <div className={"space-y-4"}>
                             <div className="grid grid-cols-3 items-center gap-4">
                                 <Label htmlFor="status">Status</Label>

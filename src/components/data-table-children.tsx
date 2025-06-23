@@ -69,7 +69,6 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
                         </Button>
                     </PopoverTrigger>
 
-                    {/* TODO: Implement filtering based on gender, school, and grade */}
                     <PopoverContent className="space-y-8">
                         <div className={"space-y-4"}>
                             <div className="grid grid-cols-3 items-center gap-4">

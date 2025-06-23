@@ -6,7 +6,6 @@ import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button.tsx";
 import { Eye } from "lucide-react";
-import { DataTableAchievement } from "@/components/data-table-achievement.tsx"; // Assuming a generic DataTable component
 import PageTitle from "@/components/page-title.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import {dateTimeFormat} from "@/lib/utils.ts";
@@ -17,6 +16,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import {DataTablePayment} from "@/components/data-table-payment.tsx";
 
 const title = "Payment Proof List";
 const breadcrumbs = [
@@ -54,7 +54,8 @@ const columns: ColumnDef<PaymentProofListItem>[] = [
                 rejected: "destructive",
             }[status] as "secondary" | "approved" | "destructive";
             return <div className="text-center"><Badge variant={variant} className="capitalize">{status}</Badge></div>
-        }
+        },
+        filterFn: 'equals',
     },
     {
         accessorKey: "paymentProofUuid",
@@ -147,7 +148,7 @@ function PaymentProofList() {
                     <p className="text-red-500">{error}</p>
                 </div>
             ) : (
-                <DataTableAchievement columns={columns} data={data} />
+                <DataTablePayment columns={columns} data={data} />
             )}
         </div>
     );

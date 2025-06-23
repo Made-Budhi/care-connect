@@ -53,6 +53,7 @@ const columns: ColumnDef<Child>[] = [
         id: "gender",
         accessorKey: "gender",
         header: "Gender",
+        filterFn: "equals",
     },
     {
         id: "school",
@@ -63,6 +64,7 @@ const columns: ColumnDef<Child>[] = [
         id: "grade",
         accessorKey: "grade",
         header: "Grade",
+        filterFn: "equals",
     },
     {
         id: "birthdate",
