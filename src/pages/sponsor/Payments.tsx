@@ -85,13 +85,13 @@ const columns: ColumnDef<PaymentProofListItem>[] = [
                                 <span className="sr-only">View Proof</span>
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[625px]">
+                        <DialogContent className="sm:max-w-[625px]" key={proof.paymentProofUuid}>
                             <DialogHeader>
                                 <DialogTitle>Payment Proof</DialogTitle>
                             </DialogHeader>
                             <div className="bg-muted rounded-md mt-4">
                                 <img
-                                    src={proof.imagePath}
+                                    src={proof.imagePath ? proof.imagePath : "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&q=80"}
                                     alt={`Payment proof for submission ${proof.submissionUuid}`}
                                     className="rounded-md w-full object-contain"
                                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&dpr=2&q=80" }}
@@ -99,7 +99,6 @@ const columns: ColumnDef<PaymentProofListItem>[] = [
                             </div>
                         </DialogContent>
                     </Dialog>
-                    {/* Here you could add more actions like approve/reject buttons */}
                 </div>
             );
         },
