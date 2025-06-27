@@ -1,26 +1,20 @@
 import useAuth from '@/hooks/useAuth';
-import { axiosPublic } from "@/lib/axios";
+import {axiosPublic} from "@/lib/axios";
 
 const useRefreshToken = () => {
-    const { auth, setAuth } = useAuth();
+    const { setAuth } = useAuth();
 
-    return async (): Promise<string> => {
-        if (!auth?.accessToken) {
-            console.error("No access token found! Refresh token request might fail.");
-        }
-
+    return async () => {
         const response = await axiosPublic.get('/auth/v1/refresh-token', {
-            headers: {
-                'Authorization': `Bearer ${auth?.accessToken}`
-            }
+            // We send the HttpOnly cookie automatically
+            withCredentials: true
         });
 
-        setAuth((prev) => {
-            console.log(JSON.stringify(prev) + "refresh token");
-            console.log(response.data.accessToken);
+        // Update the auth context with the new user data and token
+        setAuth(prev => {
             return {
                 ...prev,
-                id: response.data.id,
+                uuid: response.data.uuid,
                 name: response.data.name,
                 email: response.data.email,
                 role: response.data.role,
@@ -28,6 +22,7 @@ const useRefreshToken = () => {
             }
         });
 
+        // Return the new access token so the interceptor can use it
         return response.data.accessToken;
     };
 };

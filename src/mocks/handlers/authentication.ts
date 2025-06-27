@@ -146,7 +146,8 @@ export const authHandlers = [
         }
 
         // Generate JWT token
-        const token = generateJwtToken(user.uuid);
+        const token = user.uuid;
+        const refreshToken = user.uuid;
 
         // Store token in activeTokens
         activeTokens.set(user.uuid, token);
@@ -158,6 +159,10 @@ export const authHandlers = [
             name: user.name,
             role: user.role,
             accessToken: token
+        }, {
+            headers: {
+                'set-cookie': `refreshToken=${refreshToken}; Path=/;`
+            }
         });
     }),
 
@@ -332,70 +337,84 @@ export const authHandlers = [
         );
     }),
 
-    // Logout endpoint
-    http.post<
-        never,
-        never
-    >(`${baseUrl}/auth/v1/logout`, async ({request}) => {
-        // Extract token from the Authorization header
-        const auth = validateBearerToken(request);
+    // REFACTORED: Logout endpoint
+    http.post(`${baseUrl}/auth/v1/logout`, async ({ cookies }) => {
+        // 1. The backend identifies the session via the refresh token cookie.
+        const { refreshToken } = cookies;
 
-        if (!auth) {
+        // If there's no refresh token, there's no session to log out.
+        // In a real app, this might not even be considered an error.
+        if (!refreshToken) {
             return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized'}),
-                {status: 401}
+                JSON.stringify({ message: 'No active session to log out.' }),
+                { status: 400 }
             );
         }
 
-        // Remove token from activeTokens
-        activeTokens.delete(auth.userId.toString());
+        // 2. The backend invalidates the session.
+        // In our mock, the refreshToken is the user's UUID, which we use as the key.
+        activeTokens.delete(refreshToken); // Remove from our mock active session store.
 
-        return HttpResponse.json({
-            message: 'Logged out successfully'
-        });
+        // 3. The backend instructs the browser to clear the cookie.
+        // We do this by sending back a 'Set-Cookie' header with an expiration date in the past.
+        return HttpResponse.json(
+            { message: 'Logged out successfully' },
+            {
+                status: 200,
+                headers: {
+                    'Set-Cookie': 'refreshToken=; Path=/;',
+                },
+            }
+        );
     }),
 
-    // Refresh token endpoint (at /auth/v1/refresh-token path)
-    http.get<
-        never,
-        never
-    >(`${baseUrl}/auth/v1/refresh-token`, async ({request}) => {
-        // Simulate a delay
-        await delay(customDelay + 5000);
+    // REFACTORED: Refresh token endpoint
+    http.get(`${baseUrl}/auth/v1/refresh-token`, async ({ cookies }) => {
+        await delay(customDelay);
 
-        // Extract token from the Authorization header
-        const auth = validateBearerToken(request);
+        // In a mock environment, we check for a regular cookie named 'refreshToken'.
+        // The real backend would validate a secure, HttpOnly cookie.
+        const { refreshToken } = cookies;
 
-        if (!auth) {
+        if (!refreshToken) {
             return new HttpResponse(
-                JSON.stringify({message: 'Unauthorized'}),
-                {status: 401}
+                JSON.stringify({ message: 'Refresh token not found' }),
+                { status: 401 } // 401 Unauthorized is appropriate here
             );
         }
 
-        // Find the user
-        const user = users.find(u => u.uuid === auth.userId);
+        // --- Backend Simulation Part (You can skip this logic in your head) ---
+        // In a real backend, you would:
+        // 1. Verify the refresh token's signature and expiration.
+        // 2. Look up the token in a database to ensure it's not been revoked.
+        // 3. Find the user associated with that token.
+        // For our mock, we'll just find a user to associate with the token.
+        // Let's pretend the mock refresh token is the user's UUID.
+        const user = users.find(u => u.uuid === refreshToken);
+        // --- End of Backend Simulation Part ---
 
         if (!user) {
             return new HttpResponse(
-                JSON.stringify({message: 'User not found'}),
-                {status: 404}
+                JSON.stringify({ message: 'Invalid refresh token' }),
+                { status: 403 } // 403 Forbidden is appropriate for an invalid token
             );
         }
 
-        // Generate a new token
-        const newToken = generateJwtToken(user.uuid);
+        // If the user and token are valid, generate a NEW access token.
+        const newAccessToken = user.uuid;
 
-        // Update the token in activeTokens
-        activeTokens.set(user.uuid.toString(), newToken);
+        // This part is important for the mock to work, but wouldn't happen on a real backend.
+        // We update our mock "active tokens" store.
+        activeTokens.set(user.uuid, newAccessToken);
 
+        // The backend responds with the new access token and user info.
+        // It also sends a new Refresh Token in a Set-Cookie header (token rotation).
         return HttpResponse.json({
-            status: 200,
             uuid: user.uuid,
             email: user.email,
             name: user.name,
             role: user.role,
-            accessToken: newToken
+            accessToken: newAccessToken
         });
     }),
 

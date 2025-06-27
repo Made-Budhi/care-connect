@@ -11,7 +11,6 @@ import {AuthProvider} from "@/context/AuthContext";
 import ProtectedRoute from "@/layouts/ProtectedRoute.tsx";
 import ForgotPassword from "@/pages/auth/ForgotPassword.tsx";
 import { Toaster } from "sonner"
-// import PersistLogin from "@/layouts/PersistLogin.tsx";
 import UnauthorizedPage from "@/pages/UnauthorizedPage.tsx";
 import SponsorLayout from "@/layouts/SponsorLayout.tsx";
 import ChildrenList from "@/pages/sponsor/ChildrenList.tsx";
@@ -44,6 +43,7 @@ import Stuarts from "@/pages/admin/Stuarts.tsx";
 import NewsListPage from "@/pages/admin/News.tsx";
 import AddEditNews from "@/pages/admin/AddEditNews.tsx";
 import AddStuart from "@/pages/admin/AddStuart.tsx";
+import AuthInitializer from "@/layouts/AuthInitializer.tsx";
 // import UserProfile from "@/pages/multi-role/UserProfile.tsx";
 
 const ADMIN = 'admin'
@@ -63,26 +63,27 @@ async function enableMocking() {
 }
 
 const router = createBrowserRouter([
-    // Authentication paths
-    {
-        element: <AuthenticationLayout/>,
-        children: [
-            // TODO:Authentication-related paths go here
-            {path: "/login", element: <Login/>},
-            {path: "/register", element: <Register/>},
-            {path: "/forgot-password", element: <ForgotPassword/>},
-        ]
-    },
 
-    // {
-    //     element: <PersistLogin/>,
-    //     children: [
+    {
+        element: <AuthInitializer/>,
+        children: [
             // Path to a path that doesn't exist
             {path: "*", element: <NotFoundPage/>},
             // Path to unauthorized page
             {path: "/unauthorized", element: <UnauthorizedPage/>},
             // Home path
             {path: "/", element: <LandingPage/>},
+
+            // Authentication paths
+            {
+                element: <AuthenticationLayout/>,
+                children: [
+                    // TODO:Authentication-related paths go here
+                    {path: "/login", element: <Login/>},
+                    {path: "/register", element: <Register/>},
+                    {path: "/forgot-password", element: <ForgotPassword/>},
+                ]
+            },
 
             {
                 element: <ProtectedRoute roles={[SPONSOR]}/>,
@@ -273,7 +274,8 @@ const router = createBrowserRouter([
             //     ]
             // }
 
-        // ]}
+        ]
+    }
 ])
 
 // Initialize MSW and then render the app

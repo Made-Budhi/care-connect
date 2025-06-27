@@ -1,7 +1,35 @@
-import {Outlet} from "react-router";
+import {Outlet, useNavigate} from "react-router";
 import CareConnect from "@/components/care-connect-logo.tsx";
+import useAuth from "@/hooks/useAuth.tsx";
+import {useEffect} from "react";
 
 function AuthenticationLayout() {
+    const { auth } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (auth.accessToken) {
+            // Render dashboard based on a user role
+            switch (auth.role) {
+                case 'sponsor':
+                    navigate('/sponsor/children');
+                    break;
+                case 'stuart':
+                    navigate('/stuart/funding');
+                    break;
+                case 'school':
+                    navigate('/school/children');
+                    break;
+                case 'admin':
+                    navigate('/admin/children');
+                    break;
+                default:
+                    // If role is not recognized, redirect to unauthorized page
+                    navigate('/unauthorized');
+            }
+        }
+    }, [auth, navigate]);
+
     return (
         <div className="grid min-h-svh lg:grid-cols-2">
             {/* Image on the left */}
