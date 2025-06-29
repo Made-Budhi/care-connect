@@ -267,13 +267,6 @@ const router = createBrowserRouter([
                     }
                 ]
             },
-            // {
-            //     element: <ProtectedRoute roles={[ADMIN, SPONSOR, SCHOOL, STUART]}/>,
-            //     children: [
-            //         {path: "/profile/me", element: <UserProfile />}
-            //     ]
-            // }
-
         ]
     }
 ])

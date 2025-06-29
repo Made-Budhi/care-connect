@@ -8,7 +8,9 @@ import {zodResolver} from "@hookform/resolvers/zod"
 import {useForm} from "react-hook-form"
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form"
 import {z} from "zod"
-import {axiosPublic} from "@/lib/axios.ts";
+import {supabase} from "@/lib/supabaseClient.ts";
+import {toast} from "sonner";
+import LoadingSpinner from "@/components/loading-spinner.tsx";
 
 const formSchema = z.object({
     name: z.string().min(1, {
@@ -34,12 +36,25 @@ export default function Register({className, ...props}: React.ComponentPropsWith
 
     const {isSubmitting} = form.formState;
 
+    // TODO: Implement email verification via e-mail
     const onSubmit = async (value: z.infer<typeof formSchema>) => {
         try {
-            await axiosPublic.post("/auth/v1/register", value)
+            const {error} = await supabase.auth.signUp({
+                email: value.email,
+                password: value.password,
+                options: {
+                    data: {
+                        name: value.name,
+                    }
+                }
+            })
+
+            if (error) throw error.message;
+
+            toast.success('Account created successfully. Please login to continue.')
+            form.reset()
         } catch (error) {
-            console.error(error)
-            alert('Something went wrong. Try again.')
+            toast.error(`${error}`)
         }
     }
 
@@ -97,7 +112,7 @@ export default function Register({className, ...props}: React.ComponentPropsWith
                                )} />
 
                     <Button variant={"ccbutton"} type="submit" className="w-full" disabled={isSubmitting}>
-                        Register
+                        {isSubmitting ? <LoadingSpinner /> : "Register"}
                     </Button>
 
                     <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">

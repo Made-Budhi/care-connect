@@ -3,14 +3,13 @@
 import {cn} from "@/lib/utils"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
-import {Link} from "react-router";
+import {Link, useNavigate} from "react-router";
 import {zodResolver} from "@hookform/resolvers/zod"
 import {useForm} from "react-hook-form"
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form"
 import {z} from "zod"
-import useAuth from "@/hooks/useAuth";
+import {supabase} from "@/lib/supabaseClient.ts";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
-import {axiosPublic} from "@/lib/axios.ts";
 import {toast} from "sonner";
 
 const formSchema = z.object({
@@ -23,32 +22,6 @@ const formSchema = z.object({
 })
 
 export function Login({className, ...props}: React.ComponentPropsWithoutRef<"form">) {
-    const { setAuth } = useAuth();
-    // const navigate = useNavigate();
-    //
-    // useEffect(() => {
-    //     if (auth.accessToken) {
-    //         // Render dashboard based on a user role
-    //         switch (auth.role) {
-    //             case 'sponsor':
-    //                 navigate('/sponsor/children');
-    //                 break;
-    //             case 'stuart':
-    //                 navigate('/stuart/funding');
-    //                 break;
-    //             case 'school':
-    //                 navigate('/school/children');
-    //                 break;
-    //             case 'admin':
-    //                 navigate('/admin/children');
-    //                 break;
-    //             default:
-    //                 // If role is not recognized, redirect to unauthorized page
-    //                 navigate('/unauthorized');
-    //         }
-    //     }
-    // }, [auth, navigate]);
-
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -58,22 +31,30 @@ export function Login({className, ...props}: React.ComponentPropsWithoutRef<"for
     })
 
     const {isSubmitting} = form.formState;
+    const navigate = useNavigate();
 
     const onSubmit = async (value: z.infer<typeof formSchema>) => {
         try {
-            const response = await axiosPublic.post(
-                `/auth/v1/login`,
-                value,
-            )
+            const {data, error} = await supabase.auth.signInWithPassword({
+                email: value.email,
+                password: value.password,
+            })
 
-            const { accessToken, name, email, uuid, role } = response.data;
-            setAuth({ accessToken, name, email, uuid, role })
+            if (error) throw error.message;
 
+            const role = data.user?.user_metadata?.role;
+            let dashboardUrl;
+            switch (role) {
+                case 'sponsor': dashboardUrl = '/sponsor/children'; break;
+                case 'stuart': dashboardUrl = '/stuart/funding'; break;
+                case 'school': dashboardUrl = '/school/children'; break;
+                case 'admin': dashboardUrl = '/admin/children'; break;
+                default: dashboardUrl = '/login';
+            }
+            navigate(dashboardUrl, { replace: true });
         } catch (error) {
             const toastPopUp = () => {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                toast.error(`${error?.response?.data.message}`)
+                toast.error(`${error}`)
             }
 
             toastPopUp()
