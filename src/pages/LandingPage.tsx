@@ -94,7 +94,7 @@ function LandingPage() {
                 {/*<Link to="/contact" className="hover:underline">Contact</Link>*/}
             </nav>
             <div className="hidden sm:flex items-center gap-4">
-                {auth.accessToken ? (
+                {auth.session ? (
                     <>
                         <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>Log Out</Button>
                         <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
@@ -143,7 +143,7 @@ function LandingPage() {
                     </ScrollLink>
                     <Link to="/contact" className="hover:underline">Contact</Link>
                     <div className="flex flex-col gap-2 mt-4">
-                        {auth.accessToken ? (
+                        {auth.session ? (
                             <>
                                 <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
                                 <div className="relative text-center text-sm after:absolute after:inset-x-0 after:top-1/2 after:-translate-y-1/2 after:z-0 after:border-t after:border-border">

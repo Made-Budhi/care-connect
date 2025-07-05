@@ -47,7 +47,9 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
     const {auth} = useAuth()
     const logout = useLogout();
     const navigate = useNavigate();
-    const initials = auth?.name?.split(" ").map(word => word[0]).slice(0, 2).join("");
+    const initials = auth?.session?.user?.user_metadata.name.split(" ").map(function (word: string[]) {
+        return word[0];
+    }).slice(0, 2).join("");
 
     const handleLogout = async () => {
         await logout();
@@ -129,13 +131,13 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                         <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" variant={"outline"} asChild>
                             <Link to={"/profile/me"}>
                                 <Avatar className="h-8 w-8 rounded-lg grayscale">
-                                    <AvatarImage src={""} alt={auth.name}/>
+                                    <AvatarImage src={""} alt={auth?.session?.user?.user_metadata.image} className={"rounded-lg"}/>
                                     <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                                 </Avatar>
 
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">{auth.name}</span>
-                                    <span className="truncate text-xs text-muted-foreground">{auth.email}</span>
+                                    <span className="truncate font-medium">{auth?.session?.user?.user_metadata.name}</span>
+                                    <span className="truncate text-xs text-muted-foreground">{auth?.session?.user?.user_metadata.email}</span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>

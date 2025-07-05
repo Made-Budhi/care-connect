@@ -17,6 +17,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import {DataTablePayment} from "@/components/data-table-payment.tsx";
+import useAuth from "@/hooks/useAuth.tsx";
+import { supabase } from "@/lib/supabaseClient";
 
 const title = "Payment Proof List";
 const breadcrumbs = [
@@ -26,17 +28,17 @@ const breadcrumbs = [
 ];
 
 // Interface for the data returned by the list endpoint
-interface PaymentProofListItem {
+interface PaymentProof {
     paymentProofUuid: string;
     submissionUuid: string;
     childrenUuid: string | null;
-    paymentStatus: 'pending' | 'approved' | 'rejected';
-    dateUploaded: string;
+    status: 'pending' | 'approved' | 'rejected';
+    date_uploaded: string;
     imagePath: string;
 }
 
 // Defining the columns for the payment proofs data table
-const columns: ColumnDef<PaymentProofListItem>[] = [
+const columns: ColumnDef<PaymentProof>[] = [
     {
         id: "index",
         accessorKey: "index",
@@ -107,33 +109,46 @@ const columns: ColumnDef<PaymentProofListItem>[] = [
 ];
 
 function PaymentProofList() {
-    const [data, setData] = useState<PaymentProofListItem[]>([]);
+    const [data, setData] = useState<PaymentProof[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const axiosPrivate = useAxiosPrivate();
+    const {auth} = useAuth();
 
     useEffect(() => {
         const fetchPaymentProofs = async () => {
+            if (!auth.uuid) {
+                if (!auth.loading) setLoading(false);
+                return;
+            }
             setLoading(true);
-            setError(null);
 
             try {
-                const response = await axiosPrivate.get(`/v1/payment-proofs`);
-                if (response.status !== 200) {
-                    throw new Error(`API Error: Status code ${response.status}`);
+                // This query fetches payment proofs, joins the related funding submission,
+                // and filters the results to only include submissions made by the current user.
+                const { data: proofs, error } = await supabase
+                    .from('payment_proofs')
+                    .select(`
+                        id,
+                        status,
+                        date_uploaded,
+                        funding_submissions ( id )
+                    `)
+                    .filter('funding_submissions.sponsor_id', 'eq', auth.uuid);
+
+                if (error) throw error.message;
+
+                if (proofs) {
+                    setData(proofs as PaymentProof[]);
                 }
-                setData(response.data);
             } catch (error) {
-                console.error("Failed to fetch payment proofs:", error);
-                setError("Failed to load payment proof data.");
+                setError(error.message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPaymentProofs();
-    }, [axiosPrivate]);
+    }, [auth.uuid, auth.loading]);
 
     return (
         <div className="space-y-8">

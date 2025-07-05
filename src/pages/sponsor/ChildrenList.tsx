@@ -1,6 +1,5 @@
 "use client"
 
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {
@@ -19,6 +18,7 @@ import {DataTableChildren} from "@/components/data-table-children.tsx";
 import {Link} from "react-router";
 import PageTitle from "@/components/page-title.tsx";
 import {dateFormat} from "@/lib/utils.ts";
+import {supabase} from "@/lib/supabaseClient.ts";
 
 const title = "Foster Child List"
 const breadcrumbs = [
@@ -28,13 +28,14 @@ const breadcrumbs = [
 ]
 
 interface Child {
-    uuid: string;
-    index: string;
+    id: string;
     name: string;
     gender: string;
-    school: string;
     grade: string;
-    birthdate: string;
+    date_of_birth: string;
+    schools: {
+        name: string;
+    }[]
 }
 
 const columns: ColumnDef<Child>[] = [
@@ -57,8 +58,12 @@ const columns: ColumnDef<Child>[] = [
     },
     {
         id: "school",
-        accessorKey: "schoolName",
+        accessorKey: "schools.name",
         header: "School",
+        cell: ({ row }) => {
+            const school = row.original.schools?.[0]; // Get the first school in the array
+            return <div>{school?.name ?? 'N/A'}</div>;
+        }
     },
     {
         id: "grade",
@@ -67,8 +72,8 @@ const columns: ColumnDef<Child>[] = [
         filterFn: "equals",
     },
     {
-        id: "birthdate",
-        accessorKey: "dateOfBirth",
+        id: "date_of_birth",
+        accessorKey: "date_of_birth",
         header: "Date of Birth",
         cell: ({ row }) => {
             const date = row.getValue("birthdate") as string;
@@ -94,13 +99,13 @@ const columns: ColumnDef<Child>[] = [
                     </div>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                            <Link to={`/sponsor/children/view/${children.uuid}`}>View Detail</Link>
+                            <Link to={`/sponsor/children/view/${children.id}`}>View Detail</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link to={`/sponsor/children/${children.uuid}/achievements`}>View Achievement</Link>
+                            <Link to={`/sponsor/children/${children.id}/achievements`}>View Achievement</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link to={`/sponsor/children/${children.uuid}/report-cards`}>View Report Card</Link>
+                            <Link to={`/sponsor/children/${children.id}/report-cards`}>View Report Card</Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -116,26 +121,55 @@ function ChildrenList() {
     const [error, setError] = useState<string | null>(null);
     const {auth} = useAuth();
 
-    const axiosPrivate = useAxiosPrivate();
-
     useEffect(() => {
-        const fetchChildren = async () => {
+        const fetchSponsoredChildren = async () => {
+            if (!auth.uuid) {
+                if (!auth.loading) setLoading(false);
+                return;
+            }
+
             setLoading(true);
 
             try {
-                const response = await axiosPrivate.get(`/v1/sponsor/${auth.uuid}/children`);
-                if (!(response.status === 200)) throw new Error(`API Error: ${response.status}`);
-                setData(response.data);
+                // This query fetches funding submissions for the current sponsor
+                // and includes the data for the matched child and their school.
+                const { data: submissions, error } = await supabase
+                    .from('funding_submissions')
+                    .select(`
+                        children:matched_child_id (
+                            id,
+                            name,
+                            gender,
+                            grade,
+                            date_of_birth,
+                            schools ( name )
+                        )
+                    `)
+                    .eq('sponsor_id', auth.uuid)
+                    .not('matched_child_id', 'is', null); // Only get submissions with a matched child
+
+                if (error) throw error;
+
+                // Extract the children data from the submissions
+                const childrenData = submissions
+                    .map(sub => sub.children)
+                    .filter((child)=> {
+                        return child !== null;
+                    }); // Filter out any null children
+
+                setData(childrenData);
+
             } catch (error) {
-                console.error(error);
-                setError("Failed to load data.");
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchChildren()
-    }, [axiosPrivate, auth.uuid]);
+        fetchSponsoredChildren();
+    }, [auth.uuid, auth.loading]);
 
     return (
         <div className={"space-y-8"}>

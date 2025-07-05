@@ -10,12 +10,12 @@ import {Button} from "@/components/ui/button.tsx";
 import {MoreHorizontal} from "lucide-react";
 import {useEffect, useState} from "react";
 import useAuth from "@/hooks/useAuth.tsx";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {DataTableFunding} from "@/components/data-table-funding.tsx";
 import PageTitle from "@/components/page-title.tsx";
 import {Link} from "react-router";
 import {dateTimeFormat} from "@/lib/utils.ts";
+import {supabase} from "@/lib/supabaseClient.ts";
 
 const PENDING = "pending";
 const APPROVED = "approved";
@@ -29,7 +29,7 @@ const breadcrumbs = [
 ]
 
 interface FundingSubmission {
-    uuid: string;
+    id: string;
     status: "pending" | "approved" | "rejected";
     period: number;
     date_requested: string;
@@ -99,7 +99,7 @@ const columns: ColumnDef<FundingSubmission>[] = [
                     </div>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                            <Link to={`/sponsor/funding/view/${fundingSubmission.uuid}`}>
+                            <Link to={`/sponsor/funding/view/${fundingSubmission.id}`}>
                                 View Detail
                             </Link>
                         </DropdownMenuItem>
@@ -116,27 +116,39 @@ function FundingSubmissions() {
     const [error, setError] = useState<string | null>(null);
     const {auth} = useAuth();
 
-    const axiosPrivate = useAxiosPrivate();
-
     useEffect(() => {
         const fetchFundingSubmissions = async () => {
+            if (!auth.uuid) return; // Don't fetch if the user is not logged in
+
             setLoading(true);
 
             try {
-                const response = await axiosPrivate.get(`/v1/funding-submissions/sponsor/${auth.uuid}`);
-                if (!(response.status === 200)) throw new Error(`API Error: ${response.status}`);
-                console.log("Funding Submissions: " + response.data);
-                setData(response.data);
+                // Use the Supabase client to query the 'funding_submissions' table
+                const { data: submissions, error } = await supabase
+                    .from('funding_submissions')
+                    // Select the specific columns needed for the list view
+                    .select('id, status, period, date_requested')
+                    // Filter the results to only show submissions by the current user
+                    .eq('sponsor_id', auth.uuid)
+                    // Order by the most recently requested
+                    .order('date_requested', { ascending: false });
+
+                if (error) throw error.message;
+
+                if (submissions) {
+                    setData(submissions);
+                }
             } catch (error) {
-                console.error(error);
-                setError("Failed to load data.");
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchFundingSubmissions()
-    }, [axiosPrivate, auth.uuid]);
+        fetchFundingSubmissions();
+    }, [auth.uuid]);
 
     return (
         <div className={"space-y-8"}>

@@ -39,17 +39,33 @@ export default function Register({className, ...props}: React.ComponentPropsWith
     // TODO: Implement email verification via e-mail
     const onSubmit = async (value: z.infer<typeof formSchema>) => {
         try {
-            const {error} = await supabase.auth.signUp({
+            const {data, error} = await supabase.auth.signUp({
                 email: value.email,
                 password: value.password,
                 options: {
                     data: {
                         name: value.name,
+                        role: 'sponsor',
                     }
                 }
             })
 
-            if (error) throw error.message;
+            if (error) {
+                throw error.message;
+            }
+
+            if (data.user) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert({
+                        id: data.user.id,
+                        name: value.name,
+                        email: value.email,
+                        role: 'sponsor' // Ensure the role matches
+                    });
+
+                if (profileError) throw profileError;
+            }
 
             toast.success('Account created successfully. Please login to continue.')
             form.reset()

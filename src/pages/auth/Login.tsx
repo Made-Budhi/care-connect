@@ -53,11 +53,7 @@ export function Login({className, ...props}: React.ComponentPropsWithoutRef<"for
             }
             navigate(dashboardUrl, { replace: true });
         } catch (error) {
-            const toastPopUp = () => {
-                toast.error(`${error}`)
-            }
-
-            toastPopUp()
+            toast.error(`${error}`)
         }
 
     }
