@@ -1,263 +1,339 @@
-import { useState } from "react";
-import {Button, buttonVariants} from "@/components/ui/button.tsx";
+import {buttonVariants} from "@/components/ui/button.tsx";
 import {Link, useNavigate} from "react-router";
-import {Link as ScrollLink} from "react-scroll";
-import Logo from "@/components/care-connect-logo.tsx";
-import useAuth from "@/hooks/useAuth.tsx";
-import useLogout from "@/hooks/useLogout.tsx";
+import Navbar from "@/components/ui/navbar";
+import ImageCarousel from "@/components/ui/imagecarousel";
+import HeroCarousel from "@/components/ui/imagecarouselhome.tsx";
+import CountUp from "@/components/ui/countupprops";
+import UseIntersectionObserver from "@/components/ui/intersectionobserver";
+import TestimonialCarousel from "@/components/ui/testimonial-carousel-effect";
+import Footer from "@/components/ui/footer";
 
 function LandingPage() {
-    const { auth } = useAuth();
-    const logout = useLogout();
     const navigate = useNavigate();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [statsRef, isStatsVisible] = UseIntersectionObserver<HTMLDivElement>();
 
-    const handleLogout = async () => {
-        await logout();
-        navigate("/");
-    }
-
-    const handleDashboard = () => {
-        switch (auth.role) {
-            case 'sponsor':
-                navigate('/sponsor/children');
-                break;
-            case 'stuart':
-                navigate('/stuart/children');
-                break;
-            case 'school':
-                navigate('/school/children');
-                break;
-            case 'admin':
-                navigate('/admin/children');
-                break;
-            default:
-                // If the role is not recognized, redirect to unauthorized page
-                navigate('/unauthorized');
-        }
+    const handleNavigation = () => {
+        navigate("/")
     }
 
     return (
     <>
-        
-        {/* <div className="p-4 flex flex-col gap-4 items-start">
-            
-            <h1 className="text-2xl font-bold">Care Connect</h1>
-            <div className="flex gap-2">
-
-                {auth.accessToken ? (
-                    <>
-                        <Button onClick={handleLogout}>Log Out</Button>
-                        <Button onClick={handleDashboard}>Dashboard</Button>
-                    </>
-                ) : (
-                    <Link to={"/login"} className={buttonVariants({variant: "default"})}>Login</Link>
-                )}
-            </div>
-            
-            <div>
-                {auth.accessToken ? <p>You are logged in.</p> : <p>You are not logged in.</p>}
-            </div>
-        </div> */}
     <div className="min-h-screen flex flex-col">  
-        <header className="sticky top-0 z-50 bg-blue-800 text-white flex flex-wrap items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center gap-2">
-                <Logo />
-            </div>
-            <nav className="hidden sm:flex gap-4 md:gap-6 justify-center">
-                <ScrollLink
-                    to="main"
-                    smooth={true}
-                    duration={500}
-                    className="hover:underline cursor-pointer"
-                >
-                    Home
-                </ScrollLink>
-                <ScrollLink
-                    to="about"
-                    smooth={true}
-                    duration={500}
-                    className="hover:underline cursor-pointer"
-                >
-                    About
-                </ScrollLink>
-                <ScrollLink
-                    to="program"
-                    smooth={true}
-                    duration={500}
-                    className="hover:underline cursor-pointer"
-                >
-                    Program
-                </ScrollLink>
-
-                {/*TODO: To be added:*/}
-                {/*<Link to="/contact" className="hover:underline">Contact</Link>*/}
-            </nav>
-            <div className="hidden sm:flex items-center gap-4">
-                {auth.session ? (
-                    <>
-                        <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>Log Out</Button>
-                        <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
-                    </>
-                ) : (
-                    <>
-                        <Link to={"/register"} className={buttonVariants({ variant: "secondary" })}>Sign Up</Link>
-                        <Link to={"/login"} className={buttonVariants({ variant: "secondary" })}>Login</Link>
-                    </>
-                )}
-            </div>
-            {/* Mobile menu toggle button */}
-            <button
-                className="sm:hidden text-white"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-                ☰
-            </button>
-            {/* Mobile navigation dropdown */}
-            {isMobileMenuOpen && (
-                <nav className="absolute top-full left-0 w-full bg-black/50 text-white flex flex-col gap-2 p-4 rounded z-50">
-                    <ScrollLink
-                        to="main"
-                        smooth={true}
-                        duration={500}
-                        className="hover:underline cursor-pointer"
-                    >
-                        Home
-                    </ScrollLink>
-                    <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-                    <ScrollLink
-                        to="about"
-                        smooth={true}
-                        duration={500}
-                        className="hover:underline cursor-pointer"
-                    >
-                        About
-                    </ScrollLink>
-                    <ScrollLink
-                        to="program"
-                        smooth={true}
-                        duration={500}
-                        className="hover:underline cursor-pointer"
-                    >
-                        Program
-                    </ScrollLink>
-                    <Link to="/contact" className="hover:underline">Contact</Link>
-                    <div className="flex flex-col gap-2 mt-4">
-                        {auth.session ? (
-                            <>
-                                <Button onClick={handleDashboard} className={buttonVariants({ variant: "secondary" })}>Dashboard</Button>
-                                <div className="relative text-center text-sm after:absolute after:inset-x-0 after:top-1/2 after:-translate-y-1/2 after:z-0 after:border-t after:border-border">
-                                    <span className="relative z-10 bg-accent-foreground/75 px-1 rounded-2xl text-white">
-                                        Or
-                                    </span>
-                                </div>
-                                <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>Log Out</Button>
-                            </>
-                        ) : (
-                            <>
-                                <Link to={"/register"} className={buttonVariants({ variant: "secondary" })}>Sign Up</Link>
-                                <div className="relative text-center text-sm after:absolute after:inset-x-0 after:top-1/2 after:-translate-y-1/2 after:z-0 after:border-t after:border-border">
-                                    <span className="relative z-10 bg-accent-foreground/75 px-1 rounded-2xl text-white">
-                                        Or
-                                    </span>
-                                </div>
-                                <Link to={"/login"} className={buttonVariants({ variant: "secondary" })}>Login</Link>
-                            </>
-                        )}
-                    </div>
-                </nav>
-            )}
-        </header>
-        <main className="flex-grow" onClick={() => setIsMobileMenuOpen(false)}>
+        <Navbar onNavigate={handleNavigation}></Navbar>
+        {/* Main */}
+        <main className="flex-grow">
             {/* Hero Section */}
-            <section id="main" className="bg-cover bg-center text-white py-60 px-6" style={{ backgroundImage: "url('/pictures/hero-image.png')" }}>
-                <div className="max-w-4xl text-left pl-6">
-                    <h1 className="text-4xl sm:text-5xl font-bold mb-6">Give Hope, Save Children's Future</h1>
-                    <p className="text-lg sm:text-xl mb-8">
-                        Every child deserves the chance to shine—and every sponsor deserves to witness that journey. With our platform, you can stay connected, track progress, and celebrate every milestone in your sponsored child's life.
+            <section
+                id="main"
+                className="relative bg-top text-white py-60 px-6"
+            >
+                <div
+                    className="absolute inset-0 z-0">
+                        <HeroCarousel />
+                    </div>
+                <div className="max-w-4xl text-left pl-6 sm:translate-y-0 -translate-y-20">
+                    <h1 className="text-5xl sm:text-7xl font-bold mb-6">Bali School Kids</h1>
+                    <p className="text-lg sm:text-2xl mb-8">
+                        An initiative of the Rotary Clubs of Boulder and Swan jointly with the Rotary Club of Bali-Denpasar
                     </p>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <Link to={"/"} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Support Now ❤︎</Link>
+                        <Link to={"/"} className="bg-transparent hover:bg-white/20 border border-white text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Learn more {">"}</Link>
+                    </div>
                 </div>
             </section>
 
             {/* What We Do Section */}
-            <section id="about" className="py-16 px-6 bg-gray-100">
-                <div className="max-w-6xl mx-auto">
+            <section id="about" className="relative py-16 bg-gray-100">
+                <div className=" mx-auto">
                     {/* Content Row */}
-                    <div className="flex flex-col sm:flex-row items-center gap-8 mb-12">
-                        {/* Image */}
-                        <div className="flex-shrink-0">
-                            <img 
-                                src="/pictures/children.png" 
-                                alt="What we do" 
-                                className="rounded-lg shadow-lg w-full sm:w-96"
-                            />
-                        </div>
+                    <div className="flex flex-col items-center gap-8 mb-12">
                         {/* Text Content */}
-                        <div className="flex-grow text-left">
-                            <h2 className="text-3xl font-bold mb-4">What we do</h2>
-                            <p className="text-lg">
-                                We are dedicated to creating equal opportunities in education by connecting children from underprivileged backgrounds with sponsors who care. Through academic sponsorships, we help cover essential needs such as school tuition, uniforms, learning materials, and other educational expenses. Our goal is to empower children to stay in school, pursue their dreams, and build a better future for themselves and their communities.
+                        <div className="flex-1 max-w-4xl">
+                            <h2 className="text-4xl text-center font-bold mb-4">Vision & Mission</h2>
+                            <p className="text-lg m-3 text-justify">
+                                To foster genuine international goodwill and understanding in a very personal way by helping village children in Bali access primary school education. Includes: school needs, classroom equipment, environmental education, health checks and teacher development
                             </p>
                         </div>
                     </div>
+                    {/* Image Carousel */}
+                    <div className="mt-4">
+                        <ImageCarousel
+                            images={[
+                                { src: "/pictures/home-image-4.jpg", alt: "Rotary volunteer with student" },
+                                { src: "/pictures/home-image-3.jpg", alt: "Student with flag" },
+                                { src: "/pictures/home-image-2.jpg", alt: "Balinese dancers" },
+                                { src: "/pictures/home-image-1.jpg", alt: "Volunteer" }
+                            ]}
+                            autoPlayInterval={5000}
+                        />
+                    </div>
+
+                {/* Stats */}
+                    <div ref={statsRef} className="w-full py-8 mt-4 mb-12">
+                        <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+                            <div className="p-6">
+                                <h3 className="text-5xl md:text:4xl font-bold mb-2">
+                                    {isStatsVisible ? <CountUp end={1999} duration={1500} start={0}/> : 0}
+                                </h3>
+                                <p className="text-sm">Since</p>
+                            </div>
+                            {/* Dynamic Data maybe */}
+                            <div className="p-6">
+                                <h3 className="text-5xl md:text:4xl font-bold mb-2">
+                                    {isStatsVisible ? <CountUp end={21} duration={1500} start={0}/> : 0}
+                                </h3>
+                                <p className="text-sm">School</p>
+                            </div>
+                            <div className="p-6">
+                                <h3 className="text-5xl md:text:4xl font-bold mb-2">
+                                    {isStatsVisible ? <CountUp end={455} duration={1500} start={0}/> : 0}
+                                </h3>
+                                <p className="text-sm">Current Supporters</p>
+                            </div>
+                            <div className="p-6">
+                                <h3 className="text-5xl md:text:4xl font-bold mb-2">
+                                    {isStatsVisible ? <CountUp end={2198} duration={1500} start={0}/> : 0}
+                                </h3>
+                                <p className="text-sm">Supported Children</p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Features Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="flex flex-col items-center text-center">
-                            <img src="/pictures/open-book.png" alt="Education" className="h-12 mb-4" />
-                            <h3 className="font-bold text-lg">Education</h3>
-                            <p className="text-sm">Support growth through learning.</p>
+                    <div className="px-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 shadow-lg rounded-lg bg-white p-6">
+                            <div className="flex flex-col items-center text-center">
+                                <img src="/pictures/open-book.png" alt="Education" className="h-12 mb-4" />
+                                <h3 className="font-bold text-lg">Education</h3>
+                                <p className="text-sm">Support growth through learning.</p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                                <img src="/pictures/connection.png" alt="Connection" className="h-12 mb-4" />
+                                <h3 className="font-bold text-lg">Connection</h3>
+                                <p className="text-sm">Meaningful sponsor-child relationships.</p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                                <img src="/pictures/eye.png" alt="Transparency" className="h-10 mb-4" />
+                                <h3 className="font-bold text-lg">Transparency</h3>
+                                <p className="text-sm">Clear, real-time child updates.</p>
+                            </div>
+                            <div className="flex flex-col items-center text-center">
+                                <img src="/pictures/socialsupport.png" alt="Local Communities" className="h-12 mb-4" />
+                                <h3 className="font-bold text-lg">Local Communities</h3>
+                                <p className="text-sm">Support from local communities.</p>
+                            </div>
                         </div>
-                        <div className="flex flex-col items-center text-center">
-                            <img src="/pictures/connection.png" alt="Connection" className="h-12 mb-4" />
-                            <h3 className="font-bold text-lg">Connection</h3>
-                            <p className="text-sm">Meaningful sponsor-child relationships.</p>
-                        </div>
-                        <div className="flex flex-col items-center text-center">
-                            <img src="/pictures/eye.png" alt="Transparency" className="h-12 mb-4" />
-                            <h3 className="font-bold text-lg">Transparency</h3>
-                            <p className="text-sm">Clear, real-time child updates.</p>
-                        </div>
-                        <div className="flex flex-col items-center text-center">
-                            <img src="/pictures/socialsupport.png" alt="Local Communities" className="h-12 mb-4" />
-                            <h3 className="font-bold text-lg">Local Communities</h3>
-                            <p className="text-sm">Support from local communities.</p>
+
+                        {/* Rotary Logos */}
+                        <div className="flex justify-center items-center mt-15">
+                            <img src="/pictures/Boulder-Swan-BSK.png" alt="Rotary Boulder" className="h-26" />
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Our Program Section */}
-            <section id="program" className="py-16 px-6">
-                <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-3xl font-bold mb-6">Our Program</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="bg-white shadow rounded p-4">
-                            <img src="/pictures/children.png" alt="Program 1" className="rounded mb-4" />
-                            <h3 className="font-bold mb-2">After School Enrichment</h3>
-                            <p className="text-sm mb-4">Creating safe and engaging spaces for learning beyond the classroom.</p>
-                            <Button>View Details</Button>
-                        </div>
-                        <div className="bg-white shadow rounded p-4">
-                            <img src="/pictures/children.png" alt="Program 2" className="rounded mb-4" />
-                            <h3 className="font-bold mb-2">Future Scholars Fund</h3>
-                            <p className="text-sm mb-4">Supporting high-achieving students to pursue higher education.</p>
-                            <Button>View Details</Button>
-                        </div>
-                        <div className="bg-white shadow rounded p-4">
-                            <img src="/pictures/children.png" alt="Program 3" className="rounded mb-4" />
-                            <h3 className="font-bold mb-2">School Starter Pack</h3>
-                            <p className="text-sm mb-4">Providing essential supplies to help children begin their academic journey.</p>
-                            <Button>View Details</Button>
+            <section className="py-8 bg-gray-100">
+                    <div className="mx-auto px-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-bold mb-2">Event List</h3>
+                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                </div>
+                                <div>
+                                    <img src="/pictures/calendar-icon.png" alt="calendar " className="h-24 w-24" />
+                                </div>
+                            </div>
+                            <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-bold mb-2">Frequent Question</h3>
+                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                </div>
+                                <div>
+                                    <img src="/pictures/question.png" alt="calendar " className="h-24 w-24" />
+                                </div>
+                            </div>
+                            <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-bold mb-2">Yayasan Foundation</h3>
+                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                </div>
+                                <div>
+                                    <img src="/pictures/yayasan-1.png" alt="calendar " className="h-24 w-24" />
+                                </div>
+                            </div>
                         </div>
                     </div>
+            </section>
+
+            {/* Our Program Section */}
+            <section id="program" className="py-16 px-6 bg-white">
+                <div className="mx-6">
+                    <div className="flex justify-between items-center mb-8">
+                        <h2 className="text-3xl font-bold">Our Program</h2>
+                        <Link to="/programs" className="px-4 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors">more</Link>
+                    </div>
+
+                    {/* First Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img1.png" alt="After School Enrichment" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">After School Enrichment</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Creating safe and engaging spaces for learning beyond the classroom. This program funds extracurricular activities, tutoring, and mentorship opportunities.
+                                    </p>
+                                </div>
+                                <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img2.png" alt="Future Scholars Fund" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">Future Scholars Fund</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Supporting high-achieving students to pursue higher education. We offer scholarships for outstanding students with limited financial means.
+                                    </p>
+                                </div>
+                                <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img3.png" alt="School Starter Pack" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">School Starter Pack</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Providing essential supplies to help children begin their academic journey with confidence. From backpacks to notebooks, this program equips students for success.
+                                    </p>
+                                </div>
+                               <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Second Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img1.png" alt="After School Enrichment" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">After School Enrichment</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Creating safe and engaging spaces for learning beyond the classroom. This program funds extracurricular activities, tutoring, and mentorship opportunities.
+                                    </p>
+                                </div>
+                                <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img2.png" alt="Future Scholars Fund" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">Future Scholars Fund</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Supporting high-achieving students to pursue higher education. We offer scholarships for outstanding students with limited financial means.
+                                    </p>
+                                </div>
+                                <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                            <div className="h-48 overflow-hidden">
+                                <img src="/pictures/Img3.png" alt="School Starter Pack" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="p-5 flex flex-col flex-grow">
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-xl mb-2">School Starter Pack</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Providing essential supplies to help children begin their academic journey with confidence. From backpacks to notebooks, this program equips students for success.
+                                    </p>
+                                </div>
+                                <div className="mt-6 pt-2 flex flex-col">
+                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Testimoni Section */}
+            <section className="py-16 px-6 bg-white border-t border-gray-200">
+                <div className="w-full">
+                    <h2 className="text-3xl font-bold text-center mb-12">Voices That Care</h2>
+                    <TestimonialCarousel
+                        testimonials={[
+                            {
+                                quote: "The stress and loneliness courses ... taught me how to comfort myself.",
+                                author: "Arica",
+                                location: "Canada"
+                            },
+                            {
+                                quote: "Headspace gives me a slice of the day that's just for me",
+                                author: "Nadien",
+                                location: "New Mexico"
+                            },
+                            {
+                                quote: "Your app brings me so much peace and tolerance to our home",
+                                author: "Rachel",
+                                location: "UK"
+                            },
+                            {
+                                quote: "I came to learn that the storyline in my head ... was holding me back",
+                                author: "Peter",
+                                location: "Belgium"
+                            },
+                            {
+                                quote: "Headspace provides me with ... a connection to myself, and a disconnection from negative thoughts, feelings, and sensations",
+                                author: "Keri",
+                                location: "UK"
+                            },
+                            {
+                                quote: "Changing my thoughts has allowed me to change my live",
+                                author: "Davide",
+                                location: "London"
+                            },
+                            {
+                                quote: "A Happy workforce leads to a happy work environtment",
+                                author: "Jaime",
+                                location: "Spain"
+                            },
+                        ]}
+                        />
                 </div>
             </section>
         </main>
 
-        {/* Footer */}
-        <footer className="bg-blue-800 text-white py-6 text-center">
-            <p>Copyright © 2025, all rights reserved by CareConnect</p>
-        </footer>
+        {/* Footer Section */}
+        <Footer />
     </div>    
     </>
     );
