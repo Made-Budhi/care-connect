@@ -3,10 +3,14 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Link, useNavigate } from "react-router";
 import { FileQuestion } from "lucide-react";
+import { useEffect } from "react";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
 function NotFoundPage() {
+    useEffect(() =>{
+        document.title = 'Bali School Kids | 404 Not Found';
+    }, []);
     const navigate = useNavigate();
     const handleNavigation = () => {
             navigate("/")

@@ -9,6 +9,7 @@ import {useForm} from "react-hook-form"
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form"
 import {z} from "zod"
 import {axiosPublic} from "@/lib/axios.ts";
+import { useEffect } from "react";
 
 const formSchema = z.object({
     name: z.string().min(1, {
@@ -23,6 +24,9 @@ const formSchema = z.object({
 })
 
 export default function Register({className, ...props}: React.ComponentPropsWithoutRef<"form">) {
+    useEffect(() =>{
+            document.title = 'Bali School Kids | Register';
+        }, []);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {

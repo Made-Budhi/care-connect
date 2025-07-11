@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 function HeroCarousel() {
     const heroImages = [
@@ -7,14 +7,36 @@ function HeroCarousel() {
     ];
 
     const [currentIndex, setCurrentIndex] = useState(0);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
+    // Function to reset and restart autoplay
+    const resetAutoplay = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        
+        intervalRef.current = setInterval(() => {
             setCurrentIndex((prevIndex) => (prevIndex + 1) % heroImages.length);
         }, 6000); // Change image every 6 seconds
+    }, [heroImages.length]);
 
-        return () => clearInterval(interval);
-    }, []);
+    // Handle navigation click with reset
+    const goToSlide = (index: number) => {
+        setCurrentIndex(index);
+        resetAutoplay(); // Reset timer when manually changing slides
+    };
+
+    // Initialize autoplay on component mount
+    useEffect(() => {
+        resetAutoplay();
+        
+        // Cleanup on unmount
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, [resetAutoplay]);
 
     return (
         <>
@@ -38,7 +60,7 @@ function HeroCarousel() {
                 {heroImages.map((_, index) => (
                     <button
                         key={index}
-                        onClick={() => setCurrentIndex(index)}
+                        onClick={() => goToSlide(index)} 
                         className={`w-3 h-3 rounded-full transition-colors ${
                             index === currentIndex ? 'bg-blue-600' : 'bg-gray-300'
                         }`}

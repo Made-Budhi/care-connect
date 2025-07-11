@@ -12,6 +12,7 @@ import useAuth from "@/hooks/useAuth";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {axiosPublic} from "@/lib/axios.ts";
 import {toast} from "sonner";
+import { useEffect } from "react";
 
 const formSchema = z.object({
     email: z.string().email(
@@ -23,6 +24,9 @@ const formSchema = z.object({
 })
 
 export function Login({className, ...props}: React.ComponentPropsWithoutRef<"form">) {
+    useEffect(() =>{
+        document.title = 'Bali School Kids | Login';
+    }, []);
     const { setAuth } = useAuth();
     // const navigate = useNavigate();
     //
