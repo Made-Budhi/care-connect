@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { GalleryVerticalEnd } from "lucide-react";
 
 interface CareConnectProps {
     className?: string;
@@ -8,11 +7,9 @@ interface CareConnectProps {
 const CareConnect: React.FC<CareConnectProps> = ({ className = "" }) => {
     return (
         <Link to={"/"} className={`flex items-center gap-2 font-medium ${className}`}>
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                {/* Logo. TODO: Replace with CareConnect's logo (Bali School Kids Logo) */}
-                <GalleryVerticalEnd className="size-4" />
+            <div className="flex h-8 w-auto justify-cente items-center">
+                <img src="/pictures/logo-web-board.jpg" alt="CareConnect Logo" className="h-8 w-auto object-contain" />
             </div>
-            Care Connect
         </Link>
     );
 };

@@ -27,6 +27,7 @@ export default function ForgotPassword({className, ...props}: React.ComponentPro
             // Redirect to dashboard if authenticated
             navigate("/dashboard", {replace: true})
         }
+        document.title = 'Bali School Kids | Forgot Password';
     }, [auth, navigate])
 
     const form = useForm<z.infer<typeof formSchema>>({

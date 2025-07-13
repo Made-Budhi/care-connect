@@ -10,7 +10,7 @@ import Register from "@/pages/auth/Register.tsx";
 import {AuthProvider} from "@/context/AuthContext";
 import ProtectedRoute from "@/layouts/ProtectedRoute.tsx";
 import ForgotPassword from "@/pages/auth/ForgotPassword.tsx";
-import {Toaster} from "sonner"
+import { Toaster } from "sonner"
 import UnauthorizedPage from "@/pages/UnauthorizedPage.tsx";
 import SponsorLayout from "@/layouts/SponsorLayout.tsx";
 import ChildrenList from "@/pages/sponsor/ChildrenList.tsx";
@@ -25,7 +25,7 @@ import AchievementDetail from "@/pages/multi-role/AchievementDetail.tsx";
 import ActivityDetail from "@/pages/multi-role/ActivityDetail.tsx";
 import AddActivitySubmissionPage from "@/pages/sponsor/AddActivity.tsx";
 import AddFundingSubmission from "@/pages/sponsor/AddFundingSubmission.tsx";
-// import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
+import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
 import StuartLayout from "@/layouts/StuartLayout.tsx";
 // import PaymentProofApproval from "@/pages/stuart/PaymentProofApproval.tsx";
 import AllChildrenList from "@/pages/multi-role/AllChildrenList.tsx";
@@ -45,9 +45,16 @@ import AddEditNews from "@/pages/admin/AddEditNews.tsx";
 import AddStuart from "@/pages/admin/AddStuart.tsx";
 import ViewNewsArticlePage from "@/pages/multi-role/NewsDetail.tsx";
 import MatchSponsorshipPage from "@/pages/stuart/MatchChildren.tsx";
-import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
 // import MatchSponsorshipPage from "@/pages/stuart/MatchChildren.tsx";
 // import AuthInitializer from "@/layouts/AuthInitializer.tsx";
+// import AuthInitializer from "@/layouts/AuthInitializer.tsx";
+import Gallery from '@/pages/GalleryPage.tsx';
+import AboutPage from './pages/AboutPage.tsx';
+import ContactPage from './pages/ContactUsPage.tsx';
+import CulturePage from './pages/CulturePage.tsx';
+import SupportUsPage from './pages/SupportUsPage.tsx';
+import FaqPage from './pages/FaqPage.tsx';
+// import UserProfile from "@/pages/multi-role/UserProfile.tsx";
 
 const ADMIN = 'admin'
 const SPONSOR = 'sponsor'
@@ -73,6 +80,18 @@ const router = createBrowserRouter([
     {path: "/news/:uuid", element: <ViewNewsArticlePage />},
     // Path to unauthorized page
     {path: "/unauthorized", element: <UnauthorizedPage/>},
+    // Gallery Path
+    {path: "/galery", element: <Gallery/>},
+    // About Us Path
+    {path: "/about", element: <AboutPage/>},
+    // Culture Path
+    {path: "/culture", element: <CulturePage/>},
+    // Contact Path
+    {path: "/contact", element: <ContactPage/>},
+    // Support Us Path
+    {path: "/support", element: <SupportUsPage/>},
+    // Faq Path
+    {path: "/faq", element: <FaqPage/>},
     // Home path
     {path: "/", element: <LandingPage/>},
 

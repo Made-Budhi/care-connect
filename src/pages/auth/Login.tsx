@@ -11,6 +11,7 @@ import {z} from "zod"
 import {supabase} from "@/lib/supabaseClient.ts";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {toast} from "sonner";
+import { useEffect } from "react";
 
 const formSchema = z.object({
     email: z.string().email(
@@ -22,6 +23,34 @@ const formSchema = z.object({
 })
 
 export function Login({className, ...props}: React.ComponentPropsWithoutRef<"form">) {
+    useEffect(() =>{
+        document.title = 'Bali School Kids | Login';
+    }, []);
+    // const navigate = useNavigate();
+    //
+    // useEffect(() => {
+    //     if (auth.accessToken) {
+    //         // Render dashboard based on a user role
+    //         switch (auth.role) {
+    //             case 'sponsor':
+    //                 navigate('/sponsor/children');
+    //                 break;
+    //             case 'stuart':
+    //                 navigate('/stuart/funding');
+    //                 break;
+    //             case 'school':
+    //                 navigate('/school/children');
+    //                 break;
+    //             case 'admin':
+    //                 navigate('/admin/children');
+    //                 break;
+    //             default:
+    //                 // If role is not recognized, redirect to unauthorized page
+    //                 navigate('/unauthorized');
+    //         }
+    //     }
+    // }, [auth, navigate]);
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {

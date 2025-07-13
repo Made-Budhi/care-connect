@@ -1,5 +1,6 @@
 import {buttonVariants} from "@/components/ui/button.tsx";
 import {Link, useNavigate} from "react-router";
+import { useEffect } from "react";
 import Navbar from "@/components/ui/navbar";
 import ImageCarousel from "@/components/ui/imagecarousel";
 import HeroCarousel from "@/components/ui/imagecarouselhome.tsx";
@@ -8,7 +9,12 @@ import UseIntersectionObserver from "@/components/ui/intersectionobserver";
 import TestimonialCarousel from "@/components/ui/testimonial-carousel-effect";
 import Footer from "@/components/ui/footer";
 
+
 function LandingPage() {
+    useEffect(() =>{
+        document.title = 'Bali School Kids | Home';
+    }, []);
+
     const navigate = useNavigate();
     const [statsRef, isStatsVisible] = UseIntersectionObserver<HTMLDivElement>();
 
@@ -37,8 +43,8 @@ function LandingPage() {
                         An initiative of the Rotary Clubs of Boulder and Swan jointly with the Rotary Club of Bali-Denpasar
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <Link to={"/"} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Support Now ❤︎</Link>
-                        <Link to={"/"} className="bg-transparent hover:bg-white/20 border border-white text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Learn more {">"}</Link>
+                        <Link to={"/support"} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Support Now ❤︎</Link>
+                        <Link to={"/about"} className="bg-transparent hover:bg-white/20 border border-white text-white px-8 py-3 rounded-md text-lg font-medium transition-colors flex items-center justify-center">Learn more {">"}</Link>
                     </div>
                 </div>
             </section>
@@ -105,29 +111,37 @@ function LandingPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 shadow-lg rounded-lg bg-white p-6">
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/open-book.png" alt="Education" className="h-12 mb-4" />
-                                <h3 className="font-bold text-lg">Education</h3>
-                                <p className="text-sm">Support growth through learning.</p>
+                                <div className="mt-2 pt-2 flex flex-col">
+                                    <h3 className="font-bold text-lg">Education</h3>
+                                    <p className="text-sm">Support growth through learning.</p>  
+                                </div>
                             </div>
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/connection.png" alt="Connection" className="h-12 mb-4" />
-                                <h3 className="font-bold text-lg">Connection</h3>
-                                <p className="text-sm">Meaningful sponsor-child relationships.</p>
+                                <div className="mt-2 pt-2 flex flex-col">     
+                                    <h3 className="font-bold text-lg">Connection</h3>
+                                    <p className="text-sm">Meaningful sponsor-child relationships.</p>
+                                </div>
                             </div>
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/eye.png" alt="Transparency" className="h-10 mb-4" />
-                                <h3 className="font-bold text-lg">Transparency</h3>
-                                <p className="text-sm">Clear, real-time child updates.</p>
+                                <div className="mt-4 pt-2 flex flex-col">
+                                    <h3 className="font-bold text-lg">Transparency</h3>
+                                    <p className="text-sm">Clear, real-time child updates.</p>                                   
+                                </div>
                             </div>
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/socialsupport.png" alt="Local Communities" className="h-12 mb-4" />
-                                <h3 className="font-bold text-lg">Local Communities</h3>
-                                <p className="text-sm">Support from local communities.</p>
+                                <div className="mt-2 pt-2 flex flex-col">
+                                    <h3 className="font-bold text-lg">Local Communities</h3>
+                                    <p className="text-sm">Support from local communities.</p>                                  
+                                </div>
                             </div>
                         </div>
 
                         {/* Rotary Logos */}
                         <div className="flex justify-center items-center mt-15">
-                            <img src="/pictures/Boulder-Swan-BSK.png" alt="Rotary Boulder" className="h-26" />
+                            <img src="/pictures/Boulder-Swan-BSK.png" alt="Rotary Boulder" className="h-16 sm:h-20 md:h-26" />
                         </div>
                     </div>
                 </div>
@@ -139,7 +153,7 @@ function LandingPage() {
                             <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
                                 <div>
                                     <h3 className="text-lg font-bold mb-2">Event List</h3>
-                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                    <a href="https://www.balischoolkids.org/events/" className="text-sm text hover:underline">view details</a>
                                 </div>
                                 <div>
                                     <img src="/pictures/calendar-icon.png" alt="calendar " className="h-24 w-24" />
@@ -148,7 +162,7 @@ function LandingPage() {
                             <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
                                 <div>
                                     <h3 className="text-lg font-bold mb-2">Frequent Question</h3>
-                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                    <a href="/faq" className="text-sm text hover:underline">view details</a>
                                 </div>
                                 <div>
                                     <img src="/pictures/question.png" alt="calendar " className="h-24 w-24" />
@@ -157,7 +171,7 @@ function LandingPage() {
                             <div className="bg-white shadow-md rounded-lg p-6 flex justify-between items-center">
                                 <div>
                                     <h3 className="text-lg font-bold mb-2">Yayasan Foundation</h3>
-                                    <a href="#" className="text-sm text hover:underline">view details</a>
+                                    <a href="https://www.balischoolkids.org/yayasan-rotary-bali-denpasar/" className="text-sm text hover:underline">view details</a>
                                 </div>
                                 <div>
                                     <img src="/pictures/yayasan-1.png" alt="calendar " className="h-24 w-24" />
@@ -292,40 +306,20 @@ function LandingPage() {
                     <TestimonialCarousel
                         testimonials={[
                             {
-                                quote: "The stress and loneliness courses ... taught me how to comfort myself.",
-                                author: "Arica",
-                                location: "Canada"
+                                quote: "My wife and I have now visited Wayan three times in two years. It was just great this last time as he recognised and ran up to us. We managed this time to meet his mother and younger brother which was a thrill to do. We are so glad to be a part of this program and give back to the Bali people this way.",
+                                author: "Andy",
+                                location: "-"
                             },
                             {
-                                quote: "Headspace gives me a slice of the day that's just for me",
-                                author: "Nadien",
-                                location: "New Mexico"
+                                quote: "What a wonderful morning had yesterday at SD1 Mekarsari. We were so lucky to attend graduation day. It was lovely to see all the happy children and catch up with our Andi",
+                                author: "Katie",
+                                location: "-"
                             },
                             {
-                                quote: "Your app brings me so much peace and tolerance to our home",
-                                author: "Rachel",
-                                location: "UK"
-                            },
-                            {
-                                quote: "I came to learn that the storyline in my head ... was holding me back",
-                                author: "Peter",
-                                location: "Belgium"
-                            },
-                            {
-                                quote: "Headspace provides me with ... a connection to myself, and a disconnection from negative thoughts, feelings, and sensations",
-                                author: "Keri",
-                                location: "UK"
-                            },
-                            {
-                                quote: "Changing my thoughts has allowed me to change my live",
-                                author: "Davide",
-                                location: "London"
-                            },
-                            {
-                                quote: "A Happy workforce leads to a happy work environtment",
-                                author: "Jaime",
-                                location: "Spain"
-                            },
+                                quote: "After five years of supporting Ayu's education I was just so thrilled to finally meet her. She is simply gorgeous!",
+                                author: "Tracey",
+                                location: "-"
+                            }
                         ]}
                         />
                 </div>

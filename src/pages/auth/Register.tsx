@@ -8,6 +8,7 @@ import {zodResolver} from "@hookform/resolvers/zod"
 import {useForm} from "react-hook-form"
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form"
 import {z} from "zod"
+import { useEffect } from "react";
 import {supabase} from "@/lib/supabaseClient.ts";
 import {toast} from "sonner";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
@@ -25,6 +26,9 @@ const formSchema = z.object({
 })
 
 export default function Register({className, ...props}: React.ComponentPropsWithoutRef<"form">) {
+    useEffect(() =>{
+            document.title = 'Bali School Kids | Register';
+        }, []);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {

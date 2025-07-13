@@ -3,10 +3,14 @@
 import { Button } from "@/components/ui/button.tsx";
 import { Link, useNavigate } from "react-router";
 import { ShieldAlert } from "lucide-react";
+import { useEffect } from "react";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
 function UnauthorizedPage() {
+    useEffect(() =>{
+        document.title = 'Bali School Kids | Unauthorized';
+    }, []);
     const navigate = useNavigate();
 
     return (

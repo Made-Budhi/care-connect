@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 // import { Link as ScrollLink } from "react-scroll";
+import Logo from "@/components/care-connect-logo.tsx";
 
 const Footer = () => {
   return (
@@ -23,7 +24,8 @@ const Footer = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Bali School Kids Column */}
             <div>
-              <h3 className="text-xl font-bold mb-4">Bali School Kids</h3>
+              {/* <h3 className="text-xl font-bold mb-4">Bali School Kids</h3>  Bagusan logo atau text biasa?*/}
+              <Logo className="h-8 w-auto mb-3" />
               <p className="mb-4">
                 Rotary Clubs of Boulder with support from Swan Rotary Club and the Rotary Cliof Bali-Denpasar
               </p>
@@ -32,7 +34,7 @@ const Footer = () => {
               <div className="flex space-x-4 mt-6">
                 {/* WhatsApp Icon */}
                 <a 
-                  href="https://wa.me/6281123456789" 
+                  href="https://wa.me/628123812567"
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-full transition-colors"
