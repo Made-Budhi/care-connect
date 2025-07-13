@@ -27,6 +27,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {supabase} from "@/lib/supabaseClient.ts";
+import {toast} from "sonner";
 
 const title = "Stuart User Management";
 const breadcrumbs = [
@@ -35,7 +37,7 @@ const breadcrumbs = [
 
 // Interface for the user data we expect from the API
 interface StuartUser {
-    uuid: string;
+    id: string;
     name: string;
     email: string;
 }
@@ -51,11 +53,15 @@ function Stuarts() {
         setError(null);
         try {
             // Fetch only users with the 'stuart' role
-            const response = await axiosPrivate.get("/v1/users?role=stuart");
-            setData(response.data);
-        } catch (err) {
-            console.error("Failed to fetch stuart users", err);
-            setError("Failed to load user data. Please try again.");
+            const {data, error } = await supabase.from('profiles').select('*').eq('role', 'stuart');
+
+            if (error) throw error
+
+            setData(data);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error.message);
         } finally {
             setLoading(false);
         }
@@ -66,15 +72,28 @@ function Stuarts() {
     }, [axiosPrivate]);
 
     const handleDelete = async (userId: string) => {
+        setLoading(true);
         try {
-            await axiosPrivate.delete(`/v1/users/${userId}`);
-            // Refetch the user list to show the change
-            await fetchUsers();
-        } catch (err) {
-            console.error(`Failed to delete user ${userId}`, err);
-            // In a real app, you'd show a toast notification here
-            alert("Failed to delete user.");
+            // Change selected user's role to 'user'
+            const { error: functionError } = await supabase.functions.invoke('update-user-role', {
+                // The 'body' is what becomes req.json() inside your Edge Function
+                body: {
+                    userId: userId,
+                    newRole: 'sponsor'
+                },
+            });
+
+            if (functionError) throw functionError;
+
+            await supabase.from('profiles').update({
+                role: 'sponsor'
+            }).eq('id', userId);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            toast.error(error.message);
         }
+        setLoading(false);
     };
 
     // Defining the columns for the data table
@@ -122,12 +141,12 @@ function Stuarts() {
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the account for <span className="font-semibold">{user.name}</span>.
+                                        This action will not remove the user. However, <span className="font-semibold">{user.name}</span> will be changed to a sponsor.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(user.uuid)}>
+                                    <AlertDialogAction onClick={() => handleDelete(user.id)} className={"bg-red-600"}>
                                         Continue
                                     </AlertDialogAction>
                                 </AlertDialogFooter>

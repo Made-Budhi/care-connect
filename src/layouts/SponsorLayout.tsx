@@ -6,14 +6,15 @@ import {
 
 import {
     BookOpenText,
-    CreditCard,
-    HandCoins,
+    // CreditCard,
+    // HandCoins,
     Users,
 } from "lucide-react"
 
 import {Outlet} from "react-router";
 import {AppSidebar} from "@/layouts/sidebars/AppSidebar.tsx";
 import NotificationProfile from "@/components/notification-profile.tsx";
+import Footer from "@/components/ui/footer.tsx";
 
 const menus = [
     {
@@ -21,16 +22,16 @@ const menus = [
         url: "/sponsor/children",
         icon: <Users />
     },
-    {
-        title: "Funding Submissions",
-        url: "/sponsor/funding",
-        icon: <HandCoins />
-    },
-    {
-        title: "Payments",
-        url: "/sponsor/payments",
-        icon: <CreditCard />
-    },
+    // {
+    //     title: "Funding Submissions",
+    //     url: "/sponsor/funding",
+    //     icon: <HandCoins />
+    // },
+    // {
+    //     title: "Payments",
+    //     url: "/sponsor/payments",
+    //     icon: <CreditCard />
+    // },
     {
         title: "Activities",
         url: "/sponsor/activities",
@@ -49,9 +50,11 @@ function SponsorLayout() {
                     <NotificationProfile />
                 </div>
 
-                <div className="bg-cc-background p-3">
+                <div className="min-h-screen bg-cc-background p-3 mb-5">
                     <Outlet />
                 </div>
+
+                <Footer />
             </SidebarInset>
         </SidebarProvider>
     )

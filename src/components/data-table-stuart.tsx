@@ -37,12 +37,12 @@ export function DataTableStuart<TData, TValue>({ columns, data }: DataTableProps
     return (
         <div className={"space-y-3"}>
             <section id="filtering-section" className={"flex gap-2"}>
-                {auth.role === 'admin' && (
-                    <Link to={"/admin/stuarts/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>
-                        <Plus />
-                        <p>NEW</p>
-                    </Link>
-                )}
+                {/*{auth.role === 'admin' && (*/}
+                {/*    <Link to={"/admin/stuarts/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>*/}
+                {/*        <Plus />*/}
+                {/*        <p>NEW</p>*/}
+                {/*    </Link>*/}
+                {/*)}*/}
 
                 <div className={"relative"}>
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-500" />

@@ -27,7 +27,7 @@ const Navbar = ({ onNavigate }: NavbarProps) => {
                 navigate('/sponsor/children');
                 break;
             case 'stuart':
-                navigate('/stuart/children');
+                navigate('/stuart/funding');
                 break;
             case 'school':
                 navigate('/school/children');
@@ -94,7 +94,7 @@ const Navbar = ({ onNavigate }: NavbarProps) => {
 
       {/* Desktop Auth Buttons */}
       <div className="hidden sm:flex items-center gap-4">
-        {auth.accessToken ? (
+        {auth.session ? (
           <>
             <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>
               Log Out
@@ -166,7 +166,7 @@ const Navbar = ({ onNavigate }: NavbarProps) => {
           
           {/* Mobile Auth Buttons */}
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/20">
-            {auth.accessToken ? (
+            {auth.session ? (
               <>
                 <Button onClick={handleLogout} className={buttonVariants({ variant: "secondary" })}>
                   Log Out

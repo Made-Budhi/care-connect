@@ -1,8 +1,7 @@
 "use client"
 
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {useEffect, useState} from "react";
-import {Link, useParams} from "react-router"; // Assuming you use react-router for routing
+import {Link, useParams} from "react-router";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { type ColumnDef } from "@tanstack/react-table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu.tsx";
@@ -11,17 +10,30 @@ import { MoreHorizontal, FileText } from "lucide-react";
 import PageTitle from "@/components/page-title.tsx";
 import {DataTableReportCard} from "@/components/data-table-report-card.tsx";
 import useAuth from "@/hooks/useAuth.tsx";
+import {dateFormat} from "@/lib/utils.ts";
+import {supabase} from "@/lib/supabaseClient.ts";
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from "@/components/ui/dialog.tsx";
+import {toast} from "sonner";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from "@/components/ui/alert-dialog.tsx";
 
 // Interface for the Report Card entity, matching the database
 interface ReportCard {
-    uuid: string;
-    academicYear: string;
-    grade: string;
-    semester: 'odd' | 'even';
-    semesterDateStart: string;
-    semesterDateEnd: string;
-    reportCardFile: string;
-    final_grade: string;
+    academic_year: string
+    child_id: string
+    created_at: string
+    file_path: string
+    final_grade: string | null
+    grade: string
+    id: string
+    semester: "odd" | "even"
+    semester_date_end: string | null
+    semester_date_start: string | null
 }
 
 
@@ -34,10 +46,82 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
     const [data, setData] = useState<ReportCard[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { uuid } = useParams<{ uuid: string }>();
+    const [childName, setChildName] = useState<string | null>(null);
 
+    // For alert dialog
+    const [selectedReportCardsId, setSelectedReportCardsId] = useState<string | null>(null);
+    const [openDialog, setOpenDialog] = useState(false);
+
+    // State to manage the PDF viewer dialog
+    const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+    const { uuid } = useParams<{ uuid: string }>();
     const {auth} = useAuth();
-    const axiosPrivate = useAxiosPrivate();
+
+    // Function to generate a signed URL and open the dialog
+    const handleViewReportCard = async (filePath: string) => {
+        try {
+            const { data, error } = await supabase
+                .storage
+                .from('children-report-card') // Your private bucket name
+                .createSignedUrl(filePath, 3600); // URL is valid for 5 minutes
+
+            if (error) throw error;
+
+            setPdfUrl(data.signedUrl);
+            setIsPdfDialogOpen(true);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            toast.error(error.message || "An error occurred while generating the URL.");
+        }
+    };
+
+    const handleDelete = async () => {
+        setLoading(true)
+
+        try {
+            const { data: reportCard, error } = await supabase.from('report_cards')
+                .select('id, file_path').eq('id', selectedReportCardsId).single();
+
+            if (error) throw error.message;
+
+            // Step 1: Delete the image from Supabase Storage if it exists.
+            if (reportCard.file_path) {
+                const { error: storageError } = await supabase
+                    .storage
+                    .from('children-report-card')
+                    .remove([reportCard.file_path]);
+
+                if (storageError) {
+                    // Log the error but proceed to delete the DB record anyway
+                    console.error("Could not delete image from storage:", storageError.message);
+                }
+            }
+
+            // Step 2: Delete the record from the database.
+            const { error: dbError } = await supabase
+                .from('report_cards')
+                .delete()
+                .eq('id', selectedReportCardsId);
+
+            if (dbError) throw dbError;
+            toast.success("Report card deleted successfully.");
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            toast.error(error.message || "An error occurred while deleting the report card.");
+        } finally {
+
+            // re-fetch the data
+            await fetchReportCards()
+
+            setLoading(false)
+            setOpenDialog(false)
+            setSelectedReportCardsId(null)
+        }
+    };
 
     // Defining the columns for the report cards data table
     const columns: ColumnDef<ReportCard>[] = [
@@ -47,7 +131,7 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
             cell: ({ row }) => <div className="text-center">{row.index + 1}</div>,
         },
         {
-            accessorKey: "academicYear",
+            accessorKey: "academic_year",
             header: "Academic Year",
         },
         {
@@ -65,25 +149,19 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
             filterFn: "equals",
         },
         {
-            accessorKey: "semesterDateStart",
+            accessorKey: "semester_date_start",
             header: "Semester Start",
             cell: ({ row }) => {
-                const date = new Date(row.getValue("semesterDateStart"));
-                const formatted = new Intl.DateTimeFormat("en-GB", {
-                    year: "numeric", month: "long", day: "2-digit"
-                }).format(date);
-                return <div>{formatted}</div>;
+                const date = row.getValue("semester_date_start") as string;
+                return <div>{dateFormat(date)}</div>;
             }
         },
         {
-            accessorKey: "semesterDateEnd",
+            accessorKey: "semester_date_end",
             header: "Semester End",
             cell: ({ row }) => {
-                const date = new Date(row.getValue("semesterDateEnd"));
-                const formatted = new Intl.DateTimeFormat("en-GB", {
-                    year: "numeric", month: "long", day: "2-digit"
-                }).format(date);
-                return <div>{formatted}</div>;
+                const date = row.getValue("semester_date_end") as string;;
+                return <div>{dateFormat(date)}</div>;
             }
         },
         {
@@ -114,18 +192,21 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
                             {/* This item uses an <a> tag to open the PDF link in a new tab.
                               This is the standard way to link to a file.
                             */}
-                            <DropdownMenuItem asChild>
-                                <a href={reportCard.reportCardFile} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4" />
-                                    View Report Card
-                                </a>
+                            <DropdownMenuItem onClick={() => handleViewReportCard(reportCard.file_path)} className="flex items-center gap-2 cursor-pointer">
+                                <FileText className="h-4 w-4" />
+                                View Report Card
                             </DropdownMenuItem>
                             {auth.role === 'school' && (
                                 <>
                                     <DropdownMenuItem asChild>
-                                        <Link to={`/school/children/report-cards/${reportCard.uuid}/edit`}>Edit Report Card</Link>
+                                        <Link to={`/school/children/report-cards/${reportCard.id}/edit`}>Edit Report Card</Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-600">Delete Report Card</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600" onClick={() => {
+                                        setOpenDialog(true)
+                                        setSelectedReportCardsId(reportCard.id)
+                                    }}>
+                                        Delete Achievement
+                                    </DropdownMenuItem>
                                 </>
                             )}
                         </DropdownMenuContent>
@@ -135,37 +216,44 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
         }
     ];
 
-    useEffect(() => {
-        if (!uuid) {
-            setError("Child UUID is missing from the URL.");
-            return;
+    // Fetch the child's name from the database
+    const fetchChildName = async () => {
+        try {
+            const {data, error} = await supabase.from('children').select('name').eq('id', uuid).single();
+            if (error) throw error;
+            setChildName(data.name);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error.message || "An error occurred while fetching the child's name.");
         }
+    }
 
-        const fetchReportCards = async () => {
-            setLoading(true);
-            setError(null);
+    const fetchReportCards = async () => {
+        try {
+            const {data, error} = await supabase.from('report_cards').select('*').eq('child_id', uuid);
 
-            try {
-                const response = await axiosPrivate.get(`/v1/report-cards/children/${uuid}`);
-                if (response.status !== 200) {
-                    throw new Error(`API Error: Status code ${response.status}`);
-                }
-                setData(response.data);
-            } catch (error) {
-                console.error("Failed to fetch report cards:", error);
-                setError("Failed to load report card data.");
-            } finally {
-                setLoading(false);
-            }
-        };
+            if (error) throw error;
 
-        fetchReportCards();
-    }, [uuid, axiosPrivate]);
+            setData(data);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error.message || "An error occurred while fetching the report cards.");
+        }
+    };
+
+    useEffect(() => {
+        setLoading(true);
+            fetchChildName()
+            fetchReportCards();
+        setLoading(false);
+    }, [uuid]);
 
 
     return (
         <div className="space-y-8">
-            <PageTitle title={"Report Cards"} breadcrumbs={breadcrumbs} />
+            <PageTitle title={`${childName}'s Report Cards`} breadcrumbs={breadcrumbs} />
 
             {loading ? (
                 <div className="h-full flex justify-center items-center p-8">
@@ -178,6 +266,42 @@ function ChildReportCards({breadcrumbs}: { breadcrumbs: Breadcrumbs[] }) {
             ) : (
                 <DataTableReportCard columns={columns} data={data} />
             )}
+
+            {/* PDF Viewer Dialog */}
+            <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+                <DialogContent className="sm:max-w-[80vw] h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Report Card Viewer</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="flex-grow">
+                        {pdfUrl ? (
+                            <iframe src={pdfUrl} className="w-full h-full rounded-md" title="Report Card PDF"/>
+                        ) : (
+                            <div className="flex items-center justify-center h-full">
+                                <LoadingSpinner />
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/*Dialog for delete confirmation*/}
+            <AlertDialog open={openDialog} onOpenChange={setOpenDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the report card
+                            and remove the data from our servers.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete()} className={"bg-red-600"}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

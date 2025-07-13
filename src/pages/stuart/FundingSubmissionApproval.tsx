@@ -1,15 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
+// import { Link } from "react-router";
 import PageTitle from "@/components/page-title.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { dateTimeFormat } from "@/lib/utils.ts";
+// import { Button } from "@/components/ui/button.tsx";
+import {dateFormat} from "@/lib/utils.ts";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import {supabase} from "@/lib/supabaseClient.ts";
+import {MoveRight, Plus} from "lucide-react";
+import {Link} from "react-router";
+import {buttonVariants} from "@/components/ui/button.tsx";
 
 const title = "Funding Submission List";
 const breadcrumbs = [
@@ -18,11 +21,16 @@ const breadcrumbs = [
 
 // This interface matches the data from the /v1/funding-submissions endpoint
 interface FundingSubmissionListItem {
-    uuid: string;
-    sponsorName: string
+    id: string;
+    sponsor_id: {
+        name: string;
+    };
+    matched_child_id: {
+        name: string;
+    }
     status: 'pending' | 'approved' | 'rejected';
-    date_requested: string;
-    period: number;
+    start_date: string;
+    end_date: string;
 }
 
 function FundingSubmissionApprovalPage() {
@@ -30,15 +38,16 @@ function FundingSubmissionApprovalPage() {
     const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
 
     useEffect(() => {
         const fetchSubmissions = async () => {
             setLoading(true);
             setError(null);
             try {
-                const response = await axiosPrivate.get("/v1/funding-submissions");
-                const data: FundingSubmissionListItem[] = response.data;
+                const {data, error} = await supabase.from('funding_submissions').select('*, sponsor_id:sponsor_id (name), matched_child_id:matched_child_id (name)').order('date_requested', { ascending: false });
+
+                if (error) throw error
+
                 setSubmissions(data);
 
                 // Calculate counts after fetching
@@ -47,16 +56,17 @@ function FundingSubmissionApprovalPage() {
                 const rejectedCount = data.filter(s => s.status === 'rejected').length;
                 setCounts({ pending: pendingCount, approved: approvedCount, rejected: rejectedCount });
 
-            } catch (err) {
-                console.error("Failed to fetch funding submissions", err);
-                setError("Failed to load submissions. Please try again.");
+            } catch (error) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error.message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSubmissions();
-    }, [axiosPrivate]);
+    }, []);
 
     const StatusBadge = ({ status }: { status: 'pending' | 'approved' | 'rejected' }) => {
         const variant = {
@@ -68,22 +78,26 @@ function FundingSubmissionApprovalPage() {
     };
 
     const FundingSubmissionCard = ({submission}: {submission: FundingSubmissionListItem}) => (
-        <div key={submission.uuid} className="flex items-center justify-between p-4 border rounded-lg">
+        <div key={submission.id} className="flex items-center justify-between p-4 border rounded-lg">
             <div className={"space-y-4"}>
                 <StatusBadge status={submission.status} />
 
                 <div className={"space-y-2"}>
-                    <p className={"font-semibold text-lg"}>{submission.sponsorName}</p>
+                    <div className={"flex items-center gap-3"}>
+                        <p className={"font-semibold text-lg"}>{submission.sponsor_id?.name}</p>
+                        <MoveRight />
+                        <p className={"font-semibold text-lg"}>{submission.matched_child_id?.name}</p>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                        Requested on {dateTimeFormat(submission.date_requested)}
+                        Duration: {dateFormat(submission.start_date)} - {dateFormat(submission.end_date)}
                     </p>
                 </div>
             </div>
-            <Button asChild variant="outline" size="sm">
-                <Link to={`/stuart/funding/${submission.uuid}`}>
-                    View Details
-                </Link>
-            </Button>
+            {/*<Button asChild variant="outline" size="sm">*/}
+            {/*    <Link to={`/stuart/funding/${submission.id}`}>*/}
+            {/*        View Details*/}
+            {/*    </Link>*/}
+            {/*</Button>*/}
         </div>
     )
 
@@ -133,11 +147,17 @@ function FundingSubmissionApprovalPage() {
             <Card>
                 <CardContent>
                     <Tabs defaultValue={"all"}>
-                        <TabsList>
-                            <TabsTrigger value={"all"}>All</TabsTrigger>
-                            <TabsTrigger value={"pending"}>Pending</TabsTrigger>
-                            <TabsTrigger value={"reviewed"}>Reviewed</TabsTrigger>
-                        </TabsList>
+                        <div className={"flex itemms-center gap-4"}>
+                            <Link to={"/stuart/funding/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>
+                                <Plus />
+                                <p>NEW</p>
+                            </Link>
+                            <TabsList>
+                                <TabsTrigger value={"all"}>All</TabsTrigger>
+                                <TabsTrigger value={"pending"}>Pending</TabsTrigger>
+                                <TabsTrigger value={"reviewed"}>Reviewed</TabsTrigger>
+                            </TabsList>
+                        </div>
                         <TabsContent value={"all"} className="space-y-4">
                             {submissions.length > 0 ? submissions.map((submission) => (
                                 <FundingSubmissionCard submission={submission} />

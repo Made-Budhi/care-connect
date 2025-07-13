@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Link as ScrollLink } from "react-scroll";
+// import { Link as ScrollLink } from "react-scroll";
 
 const Footer = () => {
   return (
@@ -7,17 +7,17 @@ const Footer = () => {
       {/* Contact Section */}
       <section id="contact" className="bg-blue-900 text-white py-12 relative">
         {/* Scroll to top button */}
-        <ScrollLink
-          to="main"
-          smooth={true}
-          duration={800}
-          className="absolute right-6 top-6 bg-white text-blue-900 hover:bg-blue-100 w-10 h-10 flex items-center justify-center rounded-full shadow-md transition-all cursor-pointer"
-          aria-label="Scroll to top"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-          </svg>
-        </ScrollLink>
+        {/*<ScrollLink*/}
+        {/*  to="main"*/}
+        {/*  smooth={true}*/}
+        {/*  duration={800}*/}
+        {/*  className="absolute right-6 top-6 bg-white text-blue-900 hover:bg-blue-100 w-10 h-10 flex items-center justify-center rounded-full shadow-md transition-all cursor-pointer"*/}
+        {/*  aria-label="Scroll to top"*/}
+        {/*>*/}
+        {/*  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">*/}
+        {/*    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />*/}
+        {/*  </svg>*/}
+        {/*</ScrollLink>*/}
         
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

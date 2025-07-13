@@ -46,6 +46,7 @@ export default function Register({className, ...props}: React.ComponentPropsWith
                     data: {
                         name: value.name,
                         role: 'sponsor',
+                        // role: 'admin',
                     }
                 }
             })
@@ -61,7 +62,7 @@ export default function Register({className, ...props}: React.ComponentPropsWith
                         id: data.user.id,
                         name: value.name,
                         email: value.email,
-                        role: 'sponsor' // Ensure the role matches
+                        role: 'sponsor',
                     });
 
                 if (profileError) throw profileError;

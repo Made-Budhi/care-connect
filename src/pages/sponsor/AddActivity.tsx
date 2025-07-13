@@ -3,8 +3,7 @@
 import { z } from "zod";
 import PageTitle from "@/components/page-title.tsx";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router"; // For redirecting after success
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
+import { Link, useNavigate } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,10 +11,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
-import useAuth from "@/hooks/useAuth.tsx"; // To get the sponsor's UUID
+import useAuth from "@/hooks/useAuth.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, Users, Check, ChevronsUpDown } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient.ts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover.tsx";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command.tsx";
+import { cn } from "@/lib/utils.ts";
+import { toast } from "sonner";
 
 // Zod schema for the dynamic item donations
 const itemDonationSchema = z.object({
@@ -25,20 +28,20 @@ const itemDonationSchema = z.object({
 
 // Zod schema for the main form
 const eventSubmissionSchema = z.object({
-    childUuid: z.string().min(1, { message: "You must select a foster child." }),
-    dateStarted: z.string().min(1, { message: "Start date is required." }),
-    timeStarted: z.string().min(1, { message: "Start time is required." }),
-    dateEnded: z.string().min(1, { message: "End date is required." }),
-    timeEnded: z.string().min(1, { message: "End time is required." }),
-    activityDetail: z.string().min(10, { message: "Activity detail must be at least 10 characters." }),
+    child_id: z.string().uuid({ message: "You must select a foster child." }),
+    title: z.string().min(5, "Title must be at least 5 characters."),
+    detail: z.string().min(10, { message: "Activity detail must be at least 10 characters." }),
+    location: z.string().min(3, "Location is required."),
+    eventStart: z.string().min(1, { message: "Start date and time are required." }),
+    eventEnd: z.string().min(1, { message: "End date and time are required." }),
     itemDonations: z.array(itemDonationSchema),
 });
 
 type EventFormValues = z.infer<typeof eventSubmissionSchema>;
 
-// Interface for the child data we expect from the API for the dropdown
 interface ChildSelectItem {
-    uuid: string;
+    id: string;
+    school_id: string;
     name: string;
 }
 
@@ -47,52 +50,63 @@ function AddActivitySubmissionPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
     const navigate = useNavigate();
     const { auth } = useAuth();
 
     const title = "Propose New Event";
     const breadcrumbs = [
-        { name: "My Activity Submissions", url: "/sponsor/event-submissions" },
+        { name: "My Activity Submissions", url: "/sponsor/funding" },
         { name: "New Activity" }
     ];
 
     useEffect(() => {
-        const fetchChildren = async (sponsorUuid: string) => {
+        const fetchSponsoredChildren = async (sponsorUuid: string) => {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await axiosPrivate.get(`/v1/sponsor/${sponsorUuid}/children`);
-                const childrenData = response.data.map((child: ChildSelectItem) => ({
-                    uuid: child.uuid,
-                    name: child.name,
-                }));
-                setChildren(childrenData);
-            } catch (err) {
-                console.error("Failed to fetch children list", err);
-                setError("Could not load your list of foster children. Please try again later.");
+                // Fetch all funding submissions for the sponsor that have a matched child
+                const { data, error } = await supabase
+                    .from('funding_submissions')
+                    .select('child:matched_child_id (id, name, school_id)')
+                    .eq('sponsor_id', sponsorUuid)
+                    .not('matched_child_id', 'is', null);
+
+                if (error) throw error;
+
+                // Extract the unique children from the submissions
+                const childrenData = data
+                    .map(sub => sub.child)
+                    .filter((child, index, self) =>
+                        child && self.findIndex(c => c.id === child.id) === index
+                    );
+
+                setChildren(childrenData as ChildSelectItem[]);
+            } catch (error) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error.message || "Failed to load your sponsored children.");
             } finally {
                 setIsLoading(false);
             }
         };
 
         if (auth?.uuid) {
-            fetchChildren(auth.uuid);
+            fetchSponsoredChildren(auth.uuid);
         } else {
-            setError("Could not identify sponsor. Please try logging in again.");
+            setError("Could not identify sponsor. Please log in again.");
             setIsLoading(false);
         }
-    }, [auth, axiosPrivate]);
+    }, [auth]);
 
     const form = useForm<EventFormValues>({
         resolver: zodResolver(eventSubmissionSchema),
         defaultValues: {
-            childUuid: "",
-            dateStarted: "",
-            timeStarted: "",
-            dateEnded: "",
-            timeEnded: "",
-            activityDetail: "",
+            child_id: "",
+            title: "",
+            detail: "",
+            location: "",
+            eventStart: "",
+            eventEnd: "",
             itemDonations: [],
         }
     });
@@ -106,46 +120,130 @@ function AddActivitySubmissionPage() {
         setIsSubmitting(true);
         setError(null);
 
-        const submissionPayload = {
-            ...data,
-            sponsorUuid: auth.uuid,
-            // Combine date and time for the API
-            eventStart: `${data.dateStarted} ${data.timeStarted}:00`,
-            eventEnd: `${data.dateEnded} ${data.timeEnded}:00`,
-        };
-        console.log("Submitting form data:", submissionPayload);
+        const schoolId = children.find(child => child.id === data.child_id)?.school_id;
 
         try {
-            // This would call your actual API endpoint for creating an event submission
-            // await axiosPrivate.post('/v1/event-submissions', submissionPayload);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            navigate('/sponsor/event-submissions');
+            const submissionPayload = {
+                sponsor_id: auth.uuid,
+                child_id: data.child_id,
+                school_id: schoolId,
+                title: data.title,
+                detail: data.detail,
+                location: data.location,
+                event_start_time: new Date(data.eventStart).toISOString(),
+                event_end_time: new Date(data.eventEnd).toISOString(),
+                item_donations: data.itemDonations,
+                status: 'pending',
+            };
+
+            const { error: insertError } = await supabase
+                .from('activities')
+                .insert([submissionPayload]);
+
+            if (insertError) throw insertError;
+
+            toast.success("Event proposal submitted successfully!");
+            navigate('/sponsor/activities');
 
         } catch (err) {
-            console.error("Failed to submit event", err);
-            setError("Failed to submit event. Please try again.");
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(err.message || "Failed to submit event proposal.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="space-y-8">
-                <PageTitle title={title} breadcrumbs={breadcrumbs} />
-                <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>
-            </div>
-        );
-    }
+    const renderContent = () => {
+        if (isLoading) {
+            return <div className="flex justify-center items-center h-64"><LoadingSpinner /></div>;
+        }
 
-    if (error && !children.length) { // Only show full-page error if children list failed
+        if (error) {
+            return <p className="text-center text-red-500 py-10">{error}</p>;
+        }
+
+        if (children.length === 0) {
+            return (
+                <div className="text-center py-16 px-6">
+                    <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-semibold">No Sponsored Children Found</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                        You need to sponsor at least one child before you can propose an event.
+                    </p>
+                    <Button asChild className="mt-6" variant={"ccbutton"}>
+                        <Link to="/sponsor/children/find">Sponsor a Child</Link>
+                    </Button>
+                </div>
+            );
+        }
+
         return (
-            <div className="space-y-8">
-                <PageTitle title={title} breadcrumbs={breadcrumbs} />
-                <p className="text-center text-red-500">{error}</p>
-            </div>
-        )
-    }
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <FormField
+                        control={form.control}
+                        name="child_id"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>For which child?</FormLabel>
+                                <Popover><PopoverTrigger asChild><FormControl>
+                                    <Button variant="outline" role="combobox" className={cn("justify-between", !field.value && "text-muted-foreground")}>
+                                        {field.value ? children.find(child => child.id === field.value)?.name : "Select a foster child"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </FormControl></PopoverTrigger><PopoverContent className="p-0 w-[--radix-popover-trigger-width]"><Command>
+                                    <CommandInput placeholder="Search for child..." />
+                                    <CommandList><CommandEmpty>No child found.</CommandEmpty><CommandGroup>
+                                        {children.map(child => (
+                                            <CommandItem value={child.name} key={child.id} onSelect={() => form.setValue("child_id", child.id)}>
+                                                <Check className={cn("mr-2 h-4 w-4", child.id === field.value ? "opacity-100" : "opacity-0")} />
+                                                {child.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup></CommandList>
+                                </Command></PopoverContent></Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField control={form.control} name="title" render={({ field }) => (<FormItem><FormLabel>Event Title</FormLabel><FormControl><Input placeholder="e.g., Charity Book Fair" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="e.g., Sunshine Elementary School Hall" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={form.control} name="eventStart" render={({ field }) => (<FormItem><FormLabel>Start Date & Time</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="eventEnd" render={({ field }) => (<FormItem><FormLabel>End Date & Time</FormLabel><FormControl><Input type="datetime-local" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    </div>
+
+                    <FormField control={form.control} name="detail" render={({ field }) => (<FormItem><FormLabel>Activity Detail</FormLabel><FormControl><Textarea placeholder="Describe the event, its purpose, and any other relevant details." className="resize-y min-h-[100px]" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+
+                    <div>
+                        <FormLabel>Requested Item Donations (Optional)</FormLabel>
+                        <div className="space-y-4 pt-2">
+                            {fields.map((field, index) => (
+                                <div key={field.id} className="flex items-start gap-2">
+                                    <FormField control={form.control} name={`itemDonations.${index}.name`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="Item Name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name={`itemDonations.${index}.quantity`} render={({ field }) => (<FormItem className="w-32"><FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => append({ name: "", quantity: 1 })}>Add Donation Item</Button>
+                        </div>
+                    </div>
+
+                    {form.formState.errors.root && <p className="text-sm font-medium text-destructive">{form.formState.errors.root.message}</p>}
+
+                    <div className="flex justify-end">
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <LoadingSpinner />}
+                            Submit Event Proposal
+                        </Button>
+                    </div>
+                </form>
+            </Form>
+        );
+    };
 
     return (
         <div className="space-y-8">
@@ -156,80 +254,7 @@ function AddActivitySubmissionPage() {
                     <CardDescription>Fill out the details below to propose a new activity with a foster child.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="childUuid"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>For which child?</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a foster child" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {children.map(child => (
-                                                    <SelectItem key={child.uuid} value={child.uuid}>{child.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={form.control} name="dateStarted" render={({ field }) => (
-                                    <FormItem><FormLabel>Start Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={form.control} name="timeStarted" render={({ field }) => (
-                                    <FormItem><FormLabel>Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={form.control} name="dateEnded" render={({ field }) => (
-                                    <FormItem><FormLabel>End Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={form.control} name="timeEnded" render={({ field }) => (
-                                    <FormItem><FormLabel>End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                            </div>
-
-                            <FormField control={form.control} name="activityDetail" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Activity Detail</FormLabel>
-                                    <FormControl><Textarea placeholder="Describe the event, its purpose, location, and any other relevant details." className="resize-y min-h-[100px]" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-
-                            <div>
-                                <FormLabel>Requested Item Donations (Optional)</FormLabel>
-                                <div className="space-y-4 pt-2">
-                                    {fields.map((field, index) => (
-                                        <div key={field.id} className="flex items-start gap-2">
-                                            <FormField control={form.control} name={`itemDonations.${index}.name`} render={({ field }) => (
-                                                <FormItem className="flex-1"><FormControl><Input placeholder="Item Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}/>
-                                            <FormField control={form.control} name={`itemDonations.${index}.quantity`} render={({ field }) => (
-                                                <FormItem className="w-32"><FormControl><Input type="number" placeholder="Quantity" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}/>
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ name: "", quantity: 1 })}>
-                                        Add Donation Item
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-
-                            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                                {isSubmitting && <LoadingSpinner />}
-                                Submit Event Proposal
-                            </Button>
-                        </form>
-                    </Form>
+                    {renderContent()}
                 </CardContent>
             </Card>
         </div>

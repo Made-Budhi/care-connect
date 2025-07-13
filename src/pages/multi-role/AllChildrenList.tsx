@@ -1,6 +1,5 @@
 "use client"
 
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {
@@ -20,6 +19,8 @@ import {Link} from "react-router";
 import PageTitle from "@/components/page-title.tsx";
 import {dateFormat} from "@/lib/utils.ts";
 import {Badge} from "@/components/ui/badge.tsx";
+import type {Json} from "../../../database.types.ts";
+import {supabase} from "@/lib/supabaseClient.ts";
 
 const title = "Foster Child List"
 const breadcrumbs = [
@@ -29,13 +30,23 @@ const breadcrumbs = [
 ]
 
 interface Child {
-    uuid: string;
-    status: string;
-    name: string;
-    gender: "Male" | "Female";
-    school: string;
-    grade: string;
-    birthdate: string;
+    created_at: string
+    date_of_birth: string
+    dreams: string | null
+    father_job: string | null
+    father_name: string | null
+    favorite_subjects: string[] | null
+    funding_status: "funded" | "not_funded" | "pending_approval"
+    gender: "Male" | "Female"
+    id: string
+    mother_name: string | null
+    name: string
+    picture_url: string | null
+    school_id: string | null
+    semester: "even" | "odd"
+    shirt_size: string | null
+    shoes_size: string | null
+    siblings: Json | null
 }
 
 const StatusBadge = ({status}: {status: "funded" | "not_funded" | "pending_approval"}) => {
@@ -61,8 +72,6 @@ function AllChildrenList() {
     const [error, setError] = useState<string | null>(null);
     const {auth} = useAuth();
 
-    const axiosPrivate = useAxiosPrivate();
-
     const columns: ColumnDef<Child>[] = [
         {
             id: "index",
@@ -71,10 +80,10 @@ function AllChildrenList() {
             cell: ({row}) => <div className={"text-center"}>{row.index + 1}</div>
         },
         {
-            id: "status",
-            accessorKey: "status",
+            id: "funding_status",
+            accessorKey: "funding_status",
             header: () => <div className={"text-center"}>Status</div>,
-            cell: ({row}) => <div className={"text-center"}><StatusBadge status={row.getValue("status")} /></div>,
+            cell: ({row}) => <div className={"text-center"}><StatusBadge status={row.getValue("funding_status")} /></div>,
             filterFn: "equals",
         },
         {
@@ -90,7 +99,7 @@ function AllChildrenList() {
         },
         {
             id: "school",
-            accessorKey: "schoolName",
+            accessorKey: "school_id.name",
             header: "School",
         },
         {
@@ -100,11 +109,11 @@ function AllChildrenList() {
             filterFn: "equals",
         },
         {
-            id: "birthdate",
-            accessorKey: "dateOfBirth",
+            id: "date_of_birth",
+            accessorKey: "date_of_birth",
             header: "Date of Birth",
             cell: ({ row }) => {
-                const date = row.getValue("birthdate") as string;
+                const date = row.getValue("date_of_birth") as string;
                 return <div>{dateFormat(date)}</div>
             }
         },
@@ -127,13 +136,13 @@ function AllChildrenList() {
                         </div>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                                <Link to={`/${auth.role}/children/${children.uuid}`}>View Detail</Link>
+                                <Link to={`/${auth.role}/children/${children.id}`}>View Detail</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link to={`/${auth.role}/children/${children.uuid}/achievements`}>View Achievement</Link>
+                                <Link to={`/${auth.role}/children/${children.id}/achievements`}>View Achievement</Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link to={`/${auth.role}/children/${children.uuid}/report-cards`}>View Report Card</Link>
+                                <Link to={`/${auth.role}/children/${children.id}/report-cards`}>View Report Card</Link>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -147,19 +156,23 @@ function AllChildrenList() {
             setLoading(true);
 
             try {
-                const response = await axiosPrivate.get(`/v1/children`);
-                if (!(response.status === 200)) throw new Error(`API Error: ${response.status}`);
-                setData(response.data);
+                const {data, error} = await supabase.from('children').select(
+                    "id, funding_status, gender, name, date_of_birth, grade, school_id (name)"
+                );
+
+                if (error) throw error;
+
+                setData(data);
             } catch (error) {
-                console.error(error);
-                setError("Failed to load data.");
+                const message = error instanceof Error ? error.message : String(error);
+                setError(message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchChildren()
-    }, [axiosPrivate, auth.uuid]);
+    }, [auth.uuid]);
 
     return (
         <div className={"space-y-8"}>

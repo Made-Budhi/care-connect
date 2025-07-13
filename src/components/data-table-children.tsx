@@ -127,10 +127,10 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
                                     <Label htmlFor="status">Status</Label>
                                     <div className="col-span-2 relative">
                                         <Select
-                                            value={(table.getColumn("status")?.getFilterValue() as string) ?? ""}
+                                            value={(table.getColumn("funding_status")?.getFilterValue() as string) ?? ""}
                                             onValueChange={(value) => {
                                                 const filterValue = value === "all" ? "" : value;
-                                                table.getColumn("status")?.setFilterValue(filterValue);
+                                                table.getColumn("funding_status")?.setFilterValue(filterValue);
                                             }}
                                         >
                                             <SelectTrigger className="h-8 pr-8"><SelectValue placeholder="All Status" /></SelectTrigger>
@@ -141,8 +141,8 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
                                                 <SelectItem value="not_funded">Not Funded</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {isFilterActive("status") && (
-                                            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2" onClick={() => table.getColumn("status")?.setFilterValue("")}>
+                                        {isFilterActive("funding_status") && (
+                                            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2" onClick={() => table.getColumn("funding_status")?.setFilterValue("")}>
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         )}

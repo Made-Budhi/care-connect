@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/sidebar"
 import {Link, NavLink, useLocation, useNavigate} from "react-router"
 import {type JSX} from "react"
-import {Bell, GalleryVerticalEnd, LogOut} from "lucide-react";
+import {GalleryVerticalEnd, LogOut} from "lucide-react";
 import useAuth from "@/hooks/useAuth.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import useLogout from "@/hooks/useLogout.tsx";
+import {UserProfileDialog} from "@/components/user-profile-dialog.tsx";
 
 interface MenuItem {
     title: string;
@@ -34,13 +35,13 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     menus: MenuItem[];
 }
 
-const secondaryMenu = [
-    {
-        title: "Notifications",
-        url: "/notifications",
-        icon: <Bell />,
-    }
-] satisfies MenuItem[];
+// const secondaryMenu = [
+//     {
+//         title: "Notifications",
+//         url: "/notifications",
+//         icon: <Bell />,
+//     }
+// ] satisfies MenuItem[];
 
 export function AppSidebar({ menus, ...props }: AppSidebarProps) {
     const location = useLocation()
@@ -98,19 +99,19 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
 
                 <SidebarGroup key={"secondary-content"} className={"mt-auto"}>
                     <SidebarGroupContent className={"space-y-2"}>
-                        {secondaryMenu.map((menu) => (
-                            <SidebarMenu key={menu.url}>
-                                <SidebarMenuItem key={menu.title}>
-                                    <SidebarMenuButton className={"py-5 font-semibold"} asChild>
-                                        <NavLink to={menu.url} end className={(location.pathname.startsWith(menu.url) ?
-                                            "bg-cc-primary-darker text-white" : "")}>
-                                            {menu.icon}
-                                            <span>{menu.title}</span>
-                                        </NavLink>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            </SidebarMenu>
-                        ))}
+                        {/*{secondaryMenu.map((menu) => (*/}
+                        {/*    <SidebarMenu key={menu.url}>*/}
+                        {/*        <SidebarMenuItem key={menu.title}>*/}
+                        {/*            <SidebarMenuButton className={"py-5 font-semibold"} asChild>*/}
+                        {/*                <NavLink to={menu.url} end className={(location.pathname.startsWith(menu.url) ?*/}
+                        {/*                    "bg-cc-primary-darker text-white" : "")}>*/}
+                        {/*                    {menu.icon}*/}
+                        {/*                    <span>{menu.title}</span>*/}
+                        {/*                </NavLink>*/}
+                        {/*            </SidebarMenuButton>*/}
+                        {/*        </SidebarMenuItem>*/}
+                        {/*    </SidebarMenu>*/}
+                        {/*))}*/}
                         {/*Log Out*/}
                         <SidebarMenu>
                             <SidebarMenuItem key={"logout"}>
@@ -126,12 +127,12 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
 
             <SidebarFooter>
                 <Separator />
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" variant={"outline"} asChild>
-                            <Link to={"/profile/me"}>
-                                <Avatar className="h-8 w-8 rounded-lg grayscale">
-                                    <AvatarImage src={""} alt={auth?.session?.user?.user_metadata.image} className={"rounded-lg"}/>
+                <UserProfileDialog>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full" variant={"outline"}>
+                                <Avatar className="h-8 w-8 rounded-lg">
+                                    <AvatarImage src={auth?.session?.user?.user_metadata.image || undefined} alt={auth?.session?.user?.user_metadata.name} className={"rounded-lg"}/>
                                     <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                                 </Avatar>
 
@@ -139,10 +140,10 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                                     <span className="truncate font-medium">{auth?.session?.user?.user_metadata.name}</span>
                                     <span className="truncate text-xs text-muted-foreground">{auth?.session?.user?.user_metadata.email}</span>
                                 </div>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </UserProfileDialog>
             </SidebarFooter>
         </Sidebar>
     )

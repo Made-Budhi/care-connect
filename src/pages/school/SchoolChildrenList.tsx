@@ -1,6 +1,5 @@
 "use client"
 
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { type ColumnDef } from "@tanstack/react-table";
@@ -18,20 +17,20 @@ import {Link} from "react-router";
 import PageTitle from "@/components/page-title.tsx";
 import {dateFormat} from "@/lib/utils.ts";
 import {Badge} from "@/components/ui/badge.tsx";
+import {supabase} from "@/lib/supabaseClient.ts";
 
 const title = "Children in My School";
 const breadcrumbs = [
     { name: "Child List" },
 ];
 
-// This interface matches the data returned by the /v1/schools/:uuid/children endpoint
 interface Child {
-    uuid: string;
-    status: 'funded' | 'not_funded' | 'pending_approval';
-    name: string;
-    gender: string;
-    grade: string;
-    dateOfBirth: string;
+    id: string
+    date_of_birth: string
+    funding_status: "funded" | "not_funded" | "pending_approval"
+    grade: string
+    gender: "Male" | "Female"
+    name: string
 }
 
 // Reusable StatusBadge component from your example
@@ -59,9 +58,10 @@ const columns: ColumnDef<Child>[] = [
         cell: ({row}) => <div className={"text-center"}>{row.index + 1}</div>
     },
     {
-        accessorKey: "status",
+        accessorKey: "funding_status",
         header: () => <div className={"text-center"}>Funding Status</div>,
-        cell: ({row}) => <div className={"text-center"}><StatusBadge status={row.getValue("status")} /></div>
+        cell: ({row}) => <div className={"text-center"}><StatusBadge status={row.getValue("funding_status")} /></div>,
+        filterFn: "equals",
     },
     {
         accessorKey: "name",
@@ -74,12 +74,15 @@ const columns: ColumnDef<Child>[] = [
     {
         accessorKey: "grade",
         header: "Grade",
+        cell: ({ row }) => {
+            return <div>{row.getValue('grade')} Grade</div>
+        }
     },
     {
-        accessorKey: "dateOfBirth",
+        accessorKey: "date_of_birth",
         header: "Date of Birth",
         cell: ({ row }) => {
-            const date = row.getValue("dateOfBirth") as string;
+            const date = row.getValue("date_of_birth") as string;
             return <div>{dateFormat(date)}</div>
         }
     },
@@ -102,16 +105,16 @@ const columns: ColumnDef<Child>[] = [
                     </div>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                            <Link to={`/school/children/${child.uuid}`}>View Full Detail</Link>
+                            <Link to={`/school/children/${child.id}`}>View Full Detail</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link to={`/school/children/${child.uuid}/edit`}>Edit Child Data</Link>
+                            <Link to={`/school/children/${child.id}/edit`}>Edit Child Data</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link to={`/school/children/${child.uuid}/achievements`}>View Achievements</Link>
+                            <Link to={`/school/children/${child.id}/achievements`}>View Achievements</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link to={`/school/children/${child.uuid}/report-cards`}>View Report Cards</Link>
+                            <Link to={`/school/children/${child.id}/report-cards`}>View Report Cards</Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -126,13 +129,8 @@ function SchoolChildrenList() {
     const [error, setError] = useState<string | null>(null);
     const { auth } = useAuth(); // Using the auth context
 
-    const axiosPrivate = useAxiosPrivate();
-
     useEffect(() => {
-        // Assume the auth context for a school user has their own UUID
-        const userUuid = auth?.uuid;
-
-        if (!userUuid) {
+        if (!auth.uuid) {
             setError("Could not identify your user account. Please try logging in again.");
             setLoading(false);
             return;
@@ -143,32 +141,33 @@ function SchoolChildrenList() {
             setError(null);
             try {
                 // Step 1: Fetch the school associated with the logged-in user
-                const schoolResponse = await axiosPrivate.get(`/v1/schools/user/${userUuid}`);
-                const schoolUuid = schoolResponse.data.uuid;
+                const {data: schoolId, error: schoolError} = await supabase.from('schools').select('id').eq('manager_id', auth.uuid).single();
 
-                if (!schoolUuid) {
-                    throw new Error("No school is associated with your account.");
+                if (schoolError) {
+                    throw schoolError;
                 }
 
-                // Step 2: Use the fetched schoolUuid to get the children
-                const childrenResponse = await axiosPrivate.get(`/v1/schools/${schoolUuid}/children`);
-                if (childrenResponse.status !== 200) {
-                    throw new Error(`API Error: ${childrenResponse.status}`);
+                // Step 2: Use the fetched schoolId to get the children
+                const {data: childrenData, error: childrenError} = await supabase.from('children').select(
+                    'id, date_of_birth, funding_status, grade, gender, name').eq('school_id', schoolId.id);
+                
+                if (childrenError) {
+                    throw childrenError;
                 }
-                setData(childrenResponse.data);
+                
+                setData(childrenData);
 
             } catch (error) {
-                console.error(error);
-                // Provide a more specific error message if possible
-                // const errorMessage = error.response?.data?.message || "Failed to load children's data.";
-                setError("Failed to load children's data. Please try again later.");
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error.message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSchoolAndChildren();
-    }, [axiosPrivate, auth]); // Rerun the effect if the auth context changes
+    }, [auth.uuid]); // Rerun the effect if the auth context changes
 
     return (
         <div className={"space-y-8"}>

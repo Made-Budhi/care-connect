@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import PageTitle from "@/components/page-title.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button.tsx";
 import { dateTimeFormat } from "@/lib/utils.ts";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import useAuth from "@/hooks/useAuth.tsx";
+import { supabase } from "@/lib/supabaseClient.ts";
 
 const title = "Activity Submissions";
 const breadcrumbs = [
@@ -18,14 +18,16 @@ const breadcrumbs = [
     { name: "Activity Submissions" }
 ];
 
-// This interface matches the data from the API list endpoints
+// This interface matches the data shape from our Supabase query
 interface ActivitySubmissionListItem {
-    uuid: string;
+    id: string;
     title: string;
     status: 'pending' | 'approved' | 'rejected';
-    dateSubmitted: string;
-    sponsorName: string;
-    childName: string;
+    created_at: string;
+    sponsor_id: { name: string } | null;
+    child_id: {
+        name: string;
+    } | null;
 }
 
 function ActivitySubmissionApprovalPage() {
@@ -33,7 +35,6 @@ function ActivitySubmissionApprovalPage() {
     const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
     const { auth } = useAuth();
 
     useEffect(() => {
@@ -42,41 +43,51 @@ function ActivitySubmissionApprovalPage() {
             setError(null);
 
             try {
-                let apiUrl = "";
+                let query = supabase
+                    .from('activities')
+                    .select("*, sponsor_id ( name ), child_id ( name ) ");
+
                 // Admin role fetches all submissions directly
                 if (auth?.role === 'admin') {
-                    apiUrl = "/v1/activity-submissions";
+                    // No additional filter needed for admin
                 }
                 // School role performs a two-step fetch
                 else if (auth?.role === 'school' && auth.uuid) {
                     // Step 1: Find the school managed by the logged-in user
-                    const schoolResponse = await axiosPrivate.get(`/v1/schools/user/${auth.uuid}`);
-                    const schoolUuid = schoolResponse.data.uuid;
+                    const { data: schoolData, error: schoolError } = await supabase
+                        .from('schools')
+                        .select('id')
+                        .eq('manager_id', auth.uuid)
+                        .single();
 
-                    if (!schoolUuid) {
-                        throw new Error("No school is associated with your account.");
-                    }
+                    if (schoolError) throw new Error("Could not find your associated school.");
+                    if (!schoolData) throw new Error("No school is associated with your account.");
 
-                    // Step 2: Use the found school UUID to fetch the submissions
-                    apiUrl = `/v1/event-submissions/school/${schoolUuid}`;
+                    // Step 2: Filter the main query by the found school_id
+                    query = query.eq('school_id', schoolData.id);
                 } else {
                     // If no valid role or UUID, prevent the API call
                     throw new Error("You do not have permission to view this page or your account is not properly configured.");
                 }
 
-                const response = await axiosPrivate.get(apiUrl);
-                const data: ActivitySubmissionListItem[] = response.data;
-                setSubmissions(data);
+                // Execute the final query
+                const { data, error: submissionsError } = await query.order('created_at', { ascending: false });
+
+                if (submissionsError) throw submissionsError;
+
+                const submissionsData = data as ActivitySubmissionListItem[];
+                setSubmissions(submissionsData);
 
                 // Calculate counts after fetching
-                const pendingCount = data.filter(s => s.status === 'pending').length;
-                const approvedCount = data.filter(s => s.status === 'approved').length;
-                const rejectedCount = data.filter(s => s.status === 'rejected').length;
+                const pendingCount = submissionsData.filter(s => s.status === 'pending').length;
+                const approvedCount = submissionsData.filter(s => s.status === 'approved').length;
+                const rejectedCount = submissionsData.filter(s => s.status === 'rejected').length;
                 setCounts({ pending: pendingCount, approved: approvedCount, rejected: rejectedCount });
 
             } catch (err) {
-                console.error("Failed to fetch activity submissions", err);
-                setError("Failed to load submissions. Try refreshing the page. If the problem persists, please contact the administrator.");
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(err.message || "Failed to load submissions. Please try again.");
             } finally {
                 setLoading(false);
             }
@@ -89,7 +100,7 @@ function ActivitySubmissionApprovalPage() {
             setLoading(false);
             setError("Authentication context not available. Please log in.");
         }
-    }, [axiosPrivate, auth]);
+    }, [auth]);
 
     const StatusBadge = ({ status }: { status: 'pending' | 'approved' | 'rejected' }) => {
         const variant = {
@@ -101,21 +112,21 @@ function ActivitySubmissionApprovalPage() {
     };
 
     const ActivitySubmissionCard = ({submission}: {submission: ActivitySubmissionListItem}) => (
-        <div key={submission.uuid} className="space-y-6 sm:flex items-center justify-between p-4 border rounded-lg">
+        <div key={submission.id} className="space-y-6 sm:flex items-center justify-between p-4 border rounded-lg">
             <div className="space-y-4">
                 <StatusBadge status={submission.status} />
                 <div className="space-y-1">
                     <p className="font-semibold text-lg">{submission.title}</p>
                     <p className="text-sm text-muted-foreground">
-                        For <span className="font-medium text-primary">{submission.childName}</span> by <span className="font-medium text-primary">{submission.sponsorName}</span>
+                        For <span className="font-medium text-primary">{submission.child_id?.name || 'N/A'}</span> by <span className="font-medium text-primary">{submission.sponsor_id?.name || 'N/A'}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Submitted on {dateTimeFormat(submission.dateSubmitted)}
+                        Requested at {dateTimeFormat(submission.created_at)}
                     </p>
                 </div>
             </div>
             <Button asChild variant="outline" size="sm">
-                <Link to={`/school/activities/${submission.uuid}`}>
+                <Link to={`/school/activities/${submission.id}`}>
                     View Details
                 </Link>
             </Button>
@@ -166,16 +177,16 @@ function ActivitySubmissionApprovalPage() {
 
             {/* Submissions List Card */}
             <Card>
-                <CardContent className="pt-6">
+                <CardContent className="">
                     <Tabs defaultValue="all">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="">
                             <TabsTrigger value="all">All</TabsTrigger>
                             <TabsTrigger value="pending">Pending</TabsTrigger>
                             <TabsTrigger value="reviewed">Reviewed</TabsTrigger>
                         </TabsList>
                         <TabsContent value="all" className="space-y-4 mt-4">
                             {submissions.length > 0 ? submissions.map((submission) => (
-                                <ActivitySubmissionCard key={submission.uuid} submission={submission} />
+                                <ActivitySubmissionCard key={submission.id} submission={submission} />
                             )) : (
                                 <p className="text-center text-muted-foreground py-8">No submissions found.</p>
                             )}
@@ -185,7 +196,7 @@ function ActivitySubmissionApprovalPage() {
                             {counts.pending > 0 ? submissions
                                 .filter(submission => submission.status === "pending")
                                 .map((submission) => (
-                                    <ActivitySubmissionCard key={submission.uuid} submission={submission} />
+                                    <ActivitySubmissionCard key={submission.id} submission={submission} />
                                 )) : (
                                 <p className="text-center text-muted-foreground py-8">No pending submissions found.</p>
                             )}
@@ -194,7 +205,7 @@ function ActivitySubmissionApprovalPage() {
                             {counts.approved > 0 || counts.rejected > 0 ? submissions
                                 .filter(submission => submission.status === "approved" || submission.status === "rejected")
                                 .map((submission) => (
-                                    <ActivitySubmissionCard key={submission.uuid} submission={submission} />
+                                    <ActivitySubmissionCard key={submission.id} submission={submission} />
                                 )) : (
                                 <p className="text-center text-muted-foreground py-8">No reviewed submissions found.</p>
                             )}

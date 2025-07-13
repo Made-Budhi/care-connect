@@ -4,34 +4,50 @@ import { z } from "zod";
 import PageTitle from "@/components/page-title.tsx";
 import {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
-import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form.tsx";
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription} from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Button} from "@/components/ui/button.tsx";
 import {Textarea} from "@/components/ui/textarea.tsx";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
+import {supabase} from "@/lib/supabaseClient.ts";
+import useAuth from "@/hooks/useAuth.tsx";
+import {toast} from "sonner";
+
+const MAX_FILE_SIZE = 2048000; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
 // Zod schema for form validation based on the News entity
 const newsSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters long."),
     description: z.string().min(20, "Description must be at least 20 characters long."),
-    picture: z.any().optional(), // File upload validation is handled in the component
+    picture: z
+        .instanceof(FileList)
+        .optional()
+        .refine(files => {
+            if (!files || files.length === 0) return true;
+            return files?.[0]?.size <= MAX_FILE_SIZE;
+        }, `Max image size is 2MB.`)
+        .refine(files => {
+            if (!files || files.length === 0) return true;
+            return ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type);
+        }, "Only .jpg, .jpeg, and .png formats are supported."),
 });
 
 type NewsFormValues = z.infer<typeof newsSchema>;
 
 function AddEditNewsPage({ mode }: { mode: "add" | "edit" }) {
     const { uuid } = useParams<{ uuid?: string }>();
+    const {auth} = useAuth();
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState<boolean>(mode === 'edit');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
+    const [currentImagePath, setCurrentImagePath] = useState<string | null>(null); // State to hold the old image path
 
     const title = mode === 'edit' ? "Edit News Article" : "Add New News Article";
     const breadcrumbs = [
@@ -53,49 +69,81 @@ function AddEditNewsPage({ mode }: { mode: "add" | "edit" }) {
             const fetchNewsData = async () => {
                 setLoading(true);
                 try {
-                    // We need a GET /v1/news/:uuid endpoint, assuming it exists
-                    const response = await axiosPrivate.get(`/v1/news/${uuid}`);
-                    const newsData = response.data;
+                    const {data, error} = await supabase.from('news').select('*').eq('id', uuid).single();
+                    if (error) throw error;
 
-                    form.reset(newsData);
-                    setImagePreview(newsData.picture);
-                } catch (err) {
-                    console.error("Failed to fetch news data", err);
-                    setError("Could not load news article data. Please try again.");
+                    form.reset(data);
+                    // Set the path of the current image for potential deletion later
+                    setCurrentImagePath(data.picture_url);
+
+                    // Generate a temporary signed URL for the preview if the image path exists
+                    if (data.picture_url) {
+                        const { data: signedUrlData } = await supabase.storage.from('news').createSignedUrl(data.picture_url, 3600);
+                        setImagePreview(signedUrlData?.signedUrl || null);
+                    }
+                } catch (error) {
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-expect-error
+                    setError(error.message);
                 } finally {
                     setLoading(false);
                 }
             };
             fetchNewsData();
         }
-    }, [uuid, mode, form, axiosPrivate]);
+    }, [uuid, mode, form]);
 
     const onSubmit = async (data: NewsFormValues) => {
         setIsSubmitting(true);
         setError(null);
 
-        // In a real app, you would handle the file upload here and get a URL.
-        const file = data.picture?.[0];
-        if (file) {
-            console.log("File to upload:", file.name);
-        }
-
-        // Use the new image path if a file was uploaded, otherwise keep the existing one.
-        const submissionData = {
-            ...data,
-            picture: file ? `path/to/uploaded/${file.name}` : imagePreview,
-        };
-
         try {
-            if (mode === 'edit') {
-                await axiosPrivate.put(`/v1/news/${uuid}`, submissionData);
-            } else {
-                await axiosPrivate.post('/v1/news', submissionData);
+            let imagePath = currentImagePath; // Start with the existing image path
+            const file = data.picture?.[0];
+
+            // --- REFACTORED: UPLOAD AND DELETE LOGIC ---
+            if (file) {
+                // 1. If in edit mode and an old image exists, delete it from storage.
+                if (mode === 'edit' && currentImagePath) {
+                    const { error: deleteError } = await supabase.storage.from('news').remove([currentImagePath]);
+                    if (deleteError) {
+                        // Log error but don't block the upload of the new image
+                        console.error("Failed to delete old image:", deleteError.message);
+                    }
+                }
+
+                // 2. Create a unique path and upload the new file.
+                const newFilePath = `${Date.now()}-${file.name}`;
+                const { error: uploadError } = await supabase.storage.from('news').upload(newFilePath, file);
+                if (uploadError) throw uploadError;
+
+                // 3. Update the imagePath to the newly uploaded file's path.
+                imagePath = newFilePath;
             }
-            navigate('/admin/news'); // Redirect to the list page on success
-        } catch (err) {
-            console.error(`Failed to ${mode} news article`, err);
-            setError(`An error occurred while saving the article. Please try again.`);
+            // --- END OF REFACTORED LOGIC ---
+
+            const submissionData = {
+                author_id: auth.uuid,
+                title: data.title,
+                description: data.description,
+                picture_url: imagePath, // Save the correct path to the database
+            };
+
+            if (mode === 'edit') {
+                const {error} = await supabase.from('news').update(submissionData).eq('id', uuid);
+                if (error) throw error;
+                toast.success("News article updated successfully!");
+            } else {
+                const {error} = await supabase.from('news').insert(submissionData);
+                if (error) throw error;
+                toast.success("News article added successfully!");
+            }
+            navigate('/admin/news');
+
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -137,7 +185,7 @@ function AddEditNewsPage({ mode }: { mode: "add" | "edit" }) {
                                                 <FormControl>
                                                     <Input
                                                         type="file"
-                                                        accept="image/png, image/jpeg"
+                                                        accept="image/png, image/jpeg, image/jpg"
                                                         onChange={(event) => {
                                                             const file = event.target.files?.[0];
                                                             if (file) {
@@ -147,6 +195,9 @@ function AddEditNewsPage({ mode }: { mode: "add" | "edit" }) {
                                                         }}
                                                     />
                                                 </FormControl>
+                                                <FormDescription>
+                                                    {mode === 'edit' ? 'Leave blank to keep the current picture.' : 'Select an image for the article.'}
+                                                </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}

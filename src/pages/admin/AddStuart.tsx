@@ -2,9 +2,8 @@
 
 import { z } from "zod";
 import PageTitle from "@/components/page-title.tsx";
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { useNavigate } from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form.tsx";
 import { Input } from "@/components/ui/input.tsx";
@@ -29,12 +28,11 @@ type AddStuartFormValues = z.infer<typeof addStuartSchema>;
 function AddStuart() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
     const navigate = useNavigate();
 
     const title = "Add New Stuart User";
     const breadcrumbs = [
-        { name: "Stuart Management", url: "/admin/stuart-users" },
+        { name: "Stuart Management", url: "/admin/stuarts" },
         { name: "Add Stuart" }
     ];
 
@@ -48,17 +46,17 @@ function AddStuart() {
         }
     });
 
+    useEffect(() => {
+
+    }, []);
+
     const onSubmit = async (data: AddStuartFormValues) => {
         setIsSubmitting(true);
         setError(null);
 
         try {
-            await axiosPrivate.post('/v1/users', {
-                name: data.name,
-                email: data.email,
-                password: data.password, // In a real app, the backend would hash this
-            });
-            navigate('/admin/stuart-users'); // Redirect to the list page on success
+
+            navigate('/admin/stuarts');
         } catch (err) {
             console.error("Failed to add Stuart user", err);
             const errorMessage = "An unexpected error occurred. Please try again.";

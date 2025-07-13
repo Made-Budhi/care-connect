@@ -49,6 +49,15 @@ export function DataTableFunding<TData, TValue>({ columns, data }: DataTableProp
                     </Link>
                 )}
 
+                {
+                    auth.role === 'stuart' && (
+                        <Link to={"/stuart/funding/add"} className={`${buttonVariants({variant: "ccbutton"})}`}>
+                            <Plus />
+                            <p>NEW</p>
+                        </Link>
+                    )
+                }
+
                 {/*Filtering section*/}
                 <Popover>
                     <PopoverTrigger asChild>

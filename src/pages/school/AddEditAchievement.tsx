@@ -4,9 +4,16 @@ import { z } from "zod";
 import PageTitle from "@/components/page-title.tsx";
 import {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
-import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form.tsx";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage
+} from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {Button} from "@/components/ui/button.tsx";
@@ -14,39 +21,49 @@ import {Textarea} from "@/components/ui/textarea.tsx";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
+import { supabase } from "@/lib/supabaseClient.ts";
+import {toast} from "sonner"; // Assuming you have this client setup
 
-// Zod schema for form validation based on the Achievement entity
+const MAX_FILE_SIZE = 2048000;
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+
+// FIX: The Zod schema definition was incorrect.
 const achievementSchema = z.object({
     title: z.string().min(3, "Title must be at least 3 characters long."),
     description: z.string().min(10, "Description must be at least 10 characters long."),
-    achievementType: z.enum(["academic", "non-academic"], { required_error: "Please select an achievement type." }),
-    date: z.string().min(1, "The date of the achievement is required."),
-    image: z.any().optional(), // File upload validation is handled in the component logic
+    achievement_type: z.enum(["academic", "non-academic"], { required_error: "Please select an achievement type." }),
+    date_achieved: z.string().min(1, "The date of the achievement is required."),
+    image: z
+        .instanceof(FileList)
+        .optional()
+        .refine(files => {
+            // This allows the field to be optional
+            if (!files || files.length === 0) return true;
+            // Otherwise, validate the first file
+            return files?.[0]?.size <= MAX_FILE_SIZE;
+        }, `Max image size is 2MB.`)
+        .refine(files => {
+            if (!files || files.length === 0) return true;
+            return ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type);
+        }, "Only .jpg, .jpeg, and .png formats are supported."),
 });
 
+// FIX: The type declaration must be a separate statement.
 type AchievementFormValues = z.infer<typeof achievementSchema>;
 
-// REFACTORED: The component now accepts a 'mode' prop to determine its behavior.
 function AddEditAchievement({ mode }: { mode: "add" | "edit" }) {
-    // The component still gets UUIDs from the URL, but the logic now depends on the `mode`.
     const { childUuid, achievementUuid } = useParams<{ childUuid?: string; achievementUuid?: string }>();
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState<boolean>(mode === 'edit');
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-    // This state holds the child's UUID needed for navigation and API calls.
-    // It's set from the URL in 'add' mode, and from the fetched data in 'edit' mode.
     const [associatedChildUuid, setAssociatedChildUuid] = useState<string | null>(childUuid || null);
-
-    const axiosPrivate = useAxiosPrivate();
+    const [currentImagePath, setCurrentImagePath] = useState<string | null>(null);
 
     const title = mode === 'edit' ? "Edit Achievement" : "Add New Achievement";
     const breadcrumbs = [
         { name: "Child List", url: "/school/children" },
-        // Breadcrumb now robustly points to the correct child page
         { name: "Achievements", url: associatedChildUuid ? `/school/children/${associatedChildUuid}/achievements` : '#' },
         { name: mode === 'edit' ? "Edit" : "Add" }
     ];
@@ -56,68 +73,107 @@ function AddEditAchievement({ mode }: { mode: "add" | "edit" }) {
         defaultValues: {
             title: "",
             description: "",
-            achievementType: undefined,
-            date: "",
+            achievement_type: undefined,
+            date_achieved: "",
         }
     });
 
-    // Fetch data only when in 'edit' mode.
     useEffect(() => {
+        // FIX: setLoading(true) should be inside the condition.
         if (mode === 'edit' && achievementUuid) {
             const fetchAchievementData = async () => {
                 setLoading(true);
                 try {
-                    const response = await axiosPrivate.get(`/v1/achievements/${achievementUuid}`);
-                    const achievementData = response.data;
+                    const {data: achievementData, error} = await supabase
+                        .from('achievements')
+                        .select('title, description, achievement_type, date_achieved, image_url, child_id')
+                        .eq('id', achievementUuid)
+                        .single();
 
+                    if (error) throw error;
+
+                    setCurrentImagePath(achievementData?.image_url);
                     form.reset(achievementData);
-                    setImagePreview(achievementData.image);
-                    // Crucially, we set the associated child UUID from the fetched data
-                    setAssociatedChildUuid(achievementData.childrenUuid);
 
-                } catch (err) {
-                    console.error("Failed to fetch achievement data", err);
-                    setError("Could not load achievement data. Please try again.");
+                    setAssociatedChildUuid(achievementData.child_id);
+
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    setError(message);
                 } finally {
                     setLoading(false);
                 }
             };
             fetchAchievementData();
         }
-    }, [achievementUuid, mode, form, axiosPrivate]);
+    }, [achievementUuid, mode, form]);
 
     const onSubmit = async (data: AchievementFormValues) => {
         setIsSubmitting(true);
         setError(null);
 
-        // This ensures we have a child to associate the achievement with.
         if (!associatedChildUuid) {
             setError("Could not determine the associated child. Please go back and try again.");
             setIsSubmitting(false);
             return;
         }
 
-        const file = data.image?.[0];
-        if (file) {
-            console.log("File to upload:", file.name);
-        }
-
-        const submissionData = {
-            ...data,
-            childrenUuid: associatedChildUuid, // Use the definitive child UUID
-            image: file ? 'path/to/newly/uploaded/image.jpg' : imagePreview,
-        };
-
         try {
+            let imagePath;
+            const file = data.image?.[0];
+
+            // --- REFACTORED: Supabase Private Upload Logic ---
+            if (file) {
+                const filePath = `${Date.now()}-${file.name}`;
+
+                // Upload the file to your private Supabase bucket.
+                const { error: uploadError } = await supabase.storage
+                    .from('children-achievement') // Your private bucket name
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                imagePath = filePath;
+            }
+            // --- End of Upload Logic ---
+
+            const submissionData = {
+                title: data.title,
+                description: data.description,
+                achievement_type: data.achievement_type,
+                date_achieved: data.date_achieved,
+                child_id: associatedChildUuid,
+                image_url: imagePath, // Save the file path to your database
+            };
+
             if (mode === 'edit') {
-                await axiosPrivate.put(`/v1/achievements/${achievementUuid}`, submissionData);
+                // Delete the old image if it exists
+                if (file) {
+                    if (currentImagePath) {
+                        const { error: deleteError } = await supabase.storage
+                            .from('children-achievement') // Your private bucket name
+                            .remove([currentImagePath]);
+
+                        if (deleteError) throw deleteError.message;
+                    }
+                }
+
+                const { error } = await supabase.from('achievements').update(submissionData).eq('id', achievementUuid);
+                if (error) throw error;
+
+                toast.success("Achievement updated successfully!");
             } else {
-                await axiosPrivate.post('/v1/achievements', submissionData);
+                const { error } = await supabase.from('achievements').insert(submissionData);
+
+                if (error) throw error;
+
+                toast.success("Achievement added successfully!");
             }
             navigate(`/school/children/${associatedChildUuid}/achievements`);
-        } catch (err) {
-            console.error(`Failed to ${mode} achievement`, err);
-            setError(`An error occurred while saving the achievement. Please try again.`);
+
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            setError(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -142,33 +198,30 @@ function AddEditAchievement({ mode }: { mode: "add" | "edit" }) {
                         <CardContent className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* Image Preview & Upload */}
-                                <div className="space-y-2">
-                                    <FormLabel>Achievement Picture</FormLabel>
-                                    <div className="w-full bg-muted rounded-lg overflow-hidden aspect-video">
-                                        <img
-                                            src={imagePreview || "https://placehold.co/600x400/e2e8f0/64748b?text=Image"}
-                                            alt="Achievement preview"
-                                            className="object-cover w-full h-full"
-                                        />
-                                    </div>
+                                <div className="space-y-4">
+                                    <FormField name="title" control={form.control} render={({ field }) => (<FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., First Place in Spelling Bee" {...field} /></FormControl><FormMessage /></FormItem>)} />
+
                                     <FormField
                                         name="image"
                                         control={form.control}
                                         render={({ field }) => (
                                             <FormItem>
+                                                <FormLabel>Achievement Picture</FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         type="file"
-                                                        accept="image/png, image/jpeg"
+                                                        accept="image/png, image/jpeg, image/jpg"
                                                         onChange={(event) => {
                                                             const file = event.target.files?.[0];
                                                             if (file) {
-                                                                setImagePreview(URL.createObjectURL(file));
                                                                 field.onChange(event.target.files);
                                                             }
                                                         }}
                                                     />
                                                 </FormControl>
+                                                {mode === 'edit' && (
+                                                    <FormDescription>Leave this field blank to keep the current picture.</FormDescription>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -177,9 +230,8 @@ function AddEditAchievement({ mode }: { mode: "add" | "edit" }) {
 
                                 {/* Form Fields */}
                                 <div className="space-y-4">
-                                    <FormField name="title" control={form.control} render={({ field }) => (<FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., First Place in Spelling Bee" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                    <FormField name="achievementType" control={form.control} render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="academic">Academic</SelectItem><SelectItem value="non-academic">Non-Academic</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                                    <FormField name="date" control={form.control} render={({ field }) => (<FormItem><FormLabel>Date Achieved</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField name="achievement_type" control={form.control} render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="academic">Academic</SelectItem><SelectItem value="non-academic">Non-Academic</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                                    <FormField name="date_achieved" control={form.control} render={({ field }) => (<FormItem><FormLabel>Date Achieved</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 </div>
                             </div>
                             <FormField name="description" control={form.control} render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe the achievement in detail..." className="min-h-[120px]" {...field} /></FormControl><FormMessage /></FormItem>)} />

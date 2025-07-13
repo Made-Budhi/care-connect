@@ -3,7 +3,6 @@
 import PageTitle from "@/components/page-title.tsx";
 import {useEffect, useState} from "react";
 import {useParams} from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
@@ -17,62 +16,86 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
+import { supabase } from "@/lib/supabaseClient.ts";
+import { toast } from "sonner";
 
 interface Breadcrumbs {
     name?: string;
     url?: string;
 }
 
-// Interface for the Event Submission entity, matching the mock API
+// Interface for the dynamic item donations, matching the JSONB structure
 interface ItemDonation {
     name: string;
     quantity: number;
 }
 
+// REFACTORED: Interface now matches the shape of the Supabase query response
 interface EventSubmission {
-    uuid: string;
-    sponsorUuid: string;
-    schoolId: string;
+    id: string;
     title: string;
     detail: string;
     location: string;
     status: 'pending' | 'approved' | 'rejected';
-    eventStart: string;
-    eventEnd: string;
-    rejectionNote?: string;
-    itemDonations: ItemDonation[];
+    event_start_time: string;
+    event_end_time: string;
+    rejection_note: string | null;
+    item_donations: ItemDonation[] | null;
+    sponsor: { name: string } | null;
+    school: { name: string } | null;
+    child: { name: string } | null;
 }
 
 // Schema for the rejection form dialog
 const rejectionSchema = z.object({
-    rejectionNote: z.string().optional(),
+    rejectionNote: z.string().min(10, "Rejection note must be at least 10 characters.").optional(),
 });
 type RejectionFormValues = z.infer<typeof rejectionSchema>;
 
 
-function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
-    const [data, setData] = useState<EventSubmission>();
-    const [loading, setLoading] = useState(false);
+function ActivityDetail() {
+    const [data, setData] = useState<EventSubmission | null>(null);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isApproveDialogOpen, setApproveDialogOpen] = useState(false);
     const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
-    const axiosPrivate = useAxiosPrivate();
 
     const { uuid } = useParams<{ uuid: string }>();
+
+    const breadcrumbs: Breadcrumbs[] = [
+        { name: "Activity Submissions", url: "/school/activities" },
+        { name: "Detail" }
+    ];
 
     const fetchEventSubmission = async () => {
         if (!uuid) {
             setError("Event Submission UUID is missing from the URL.");
+            setLoading(false);
             return;
         }
         setLoading(true);
         setError(null);
         try {
-            const response = await axiosPrivate.get(`/v1/event-submissions/${uuid}`);
-            setData(response.data);
+            // REFACTORED: Direct Supabase call with joins
+            const { data: submissionData, error: submissionError } = await supabase
+                .from('activities')
+                .select(`
+                    *,
+                    sponsor:sponsor_id ( name ),
+                    school:school_id ( name ),
+                    child:child_id ( name )
+                `)
+                .eq('id', uuid)
+                .single();
+
+            if (submissionError) throw submissionError;
+
+            setData(submissionData);
+
         } catch (error) {
-            console.error(error);
-            setError("Failed to load event submission data.");
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error.message || "Failed to load event submission data.");
         } finally {
             setLoading(false);
         }
@@ -89,21 +112,39 @@ function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
 
     const handleApprove = async () => {
         try {
-            await axiosPrivate.patch(`/v1/event-submissions/${uuid}/approve`);
+            const { error } = await supabase
+                .from('activities')
+                .update({ status: 'approved', rejection_note: null }) // Clear rejection note on approval
+                .eq('id', uuid);
+
+            if (error) throw error;
+
+            toast.success("Submission approved successfully!");
             setApproveDialogOpen(false);
             await fetchEventSubmission(); // Refetch to show updated status
         } catch(err) {
-            console.error("Failed to approve submission", err);
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            toast.error("Failed to approve submission.", { description: err.message });
         }
     };
 
     const handleReject = async (values: RejectionFormValues) => {
         try {
-            await axiosPrivate.patch(`/v1/event-submissions/${uuid}/reject`, values);
+            const { error } = await supabase
+                .from('activities')
+                .update({ status: 'rejected', rejection_note: values.rejectionNote })
+                .eq('id', uuid);
+
+            if (error) throw error;
+
+            toast.success("Submission rejected.");
             setRejectDialogOpen(false);
             await fetchEventSubmission(); // Refetch to show updated status
         } catch(err) {
-            console.error("Failed to reject submission", err);
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            toast.error("Failed to reject submission.", { description: err.message });
         }
     };
 
@@ -134,7 +175,9 @@ function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <CardTitle className="text-2xl">{data.title}</CardTitle>
-                                    <CardDescription className="pt-1">{data.detail}</CardDescription>
+                                    <CardDescription className="pt-1">
+                                        For <span className="font-medium text-primary">{data.child?.name || 'N/A'}</span>
+                                    </CardDescription>
                                 </div>
                                 <StatusBadge status={data.status} />
                             </div>
@@ -145,22 +188,21 @@ function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Event Details</h3>
                                 <DetailRow label="Location" value={data.location} />
-                                <DetailRow label="Event Starts" value={dateTimeFormat(data.eventStart)} />
-                                <DetailRow label="Event Ends" value={dateTimeFormat(data.eventEnd)} />
-                                <DetailRow label="Sponsor Name" value={data.sponsorUuid} />
-                                {/* TODO: Change to actual sponsor's and school's name, not ID*/}
-                                <DetailRow label="School" value={data.schoolId} />
-                                <DetailRow label="Detail" value={data.detail} />
+                                <DetailRow label="Event Starts" value={dateTimeFormat(data.event_start_time)} />
+                                <DetailRow label="Event Ends" value={dateTimeFormat(data.event_end_time)} />
+                                <DetailRow label="Submitted By" value={data.sponsor?.name || 'Unknown'} />
+                                <DetailRow label="For School" value={data.school?.name || 'Unknown'} />
+                                <DetailRow label="Description" value={data.detail} />
                                 {data.status === 'rejected' && (
-                                    <DetailRow label="Rejection Reason" value={data.rejectionNote} />
+                                    <DetailRow label="Rejection Reason" value={data.rejection_note} />
                                 )}
                             </div>
                             {/* Right Column */}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Requested Item Donations</h3>
-                                {data.itemDonations.length > 0 ? (
+                                {data.item_donations && data.item_donations.length > 0 ? (
                                     <div className="space-y-2 rounded-md border p-4">
-                                        {data.itemDonations.map((item, index) => (
+                                        {data.item_donations.map((item, index) => (
                                             <div key={index} className="flex justify-between text-sm">
                                                 <span>{item.name}</span>
                                                 <span className="font-medium">{item.quantity}</span>
@@ -180,7 +222,7 @@ function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
                                     {/* Reject Button & Dialog */}
                                     <Dialog open={isRejectDialogOpen} onOpenChange={setRejectDialogOpen}>
                                         <DialogTrigger asChild>
-                                            <Button variant="outline">Reject</Button>
+                                            <Button variant="destructive">Reject</Button>
                                         </DialogTrigger>
                                         <DialogContent>
                                             <DialogHeader>
@@ -222,7 +264,7 @@ function ActivityDetail({breadcrumbs}: {breadcrumbs: Breadcrumbs[]}) {
                                             <DialogHeader>
                                                 <DialogTitle>Approve Event Submission?</DialogTitle>
                                                 <DialogDescription>
-                                                    This will make the event publicly visible. This action cannot be undone.
+                                                    This action will confirm your approval of this submission.
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <DialogFooter>

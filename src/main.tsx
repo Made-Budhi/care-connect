@@ -25,15 +25,15 @@ import AchievementDetail from "@/pages/multi-role/AchievementDetail.tsx";
 import ActivityDetail from "@/pages/multi-role/ActivityDetail.tsx";
 import AddActivitySubmissionPage from "@/pages/sponsor/AddActivity.tsx";
 import AddFundingSubmission from "@/pages/sponsor/AddFundingSubmission.tsx";
-import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
+// import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
 import StuartLayout from "@/layouts/StuartLayout.tsx";
-import PaymentProofApproval from "@/pages/stuart/PaymentProofApproval.tsx";
+// import PaymentProofApproval from "@/pages/stuart/PaymentProofApproval.tsx";
 import AllChildrenList from "@/pages/multi-role/AllChildrenList.tsx";
 import AllSchoolList from "@/pages/multi-role/AllSchoolList.tsx";
 import SchoolDetailPage from "@/pages/multi-role/SchoolDetail.tsx";
 import SchoolLayout from "@/layouts/SchoolLayout.tsx";
 import SchoolChildrenList from "@/pages/school/SchoolChildrenList.tsx";
-import AddEditChildren from "@/pages/school/AddEditChildren.tsx";
+import {AddEditChildren} from "@/pages/school/AddEditChildren.tsx";
 import AddEditAchievement from "@/pages/school/AddEditAchievement.tsx";
 import ActivitySubmissionApprovalPage from "@/pages/school/ActivityApproval.tsx";
 import AddEditReportCards from "@/pages/school/AddEditReportCards.tsx";
@@ -43,6 +43,10 @@ import Stuarts from "@/pages/admin/Stuarts.tsx";
 import NewsListPage from "@/pages/admin/News.tsx";
 import AddEditNews from "@/pages/admin/AddEditNews.tsx";
 import AddStuart from "@/pages/admin/AddStuart.tsx";
+import ViewNewsArticlePage from "@/pages/multi-role/NewsDetail.tsx";
+import MatchSponsorshipPage from "@/pages/stuart/MatchChildren.tsx";
+import FundingSubmissionApprovalPage from "@/pages/stuart/FundingSubmissionApproval.tsx";
+// import MatchSponsorshipPage from "@/pages/stuart/MatchChildren.tsx";
 // import AuthInitializer from "@/layouts/AuthInitializer.tsx";
 
 const ADMIN = 'admin'
@@ -65,6 +69,8 @@ const router = createBrowserRouter([
 
     // Path to a path that doesn't exist
     {path: "*", element: <NotFoundPage/>},
+    // Path to news
+    {path: "/news/:uuid", element: <ViewNewsArticlePage />},
     // Path to unauthorized page
     {path: "/unauthorized", element: <UnauthorizedPage/>},
     // Home path
@@ -147,15 +153,21 @@ const router = createBrowserRouter([
             {
                 element: <StuartLayout/>,
                 children: [
-                    {path: "/stuart/funding", element: <FundingSubmissionApprovalPage/>},
+                    // {path: "/stuart/funding", element: <FundingSubmissionApprovalPage/>},
+                    // {
+                    //     path: "/stuart/funding/:uuid", element: <FundingSubmissionDetail mode={"edit"} breadcrumbs={[
+                    //         {name: "Funding Submissions", url: "/stuart/funding/"},
+                    //         {name: "Detail"},
+                    //     ]}/>
+                    // },
+                    //
+                    // {path: "/stuart/payments", element: <PaymentProofApproval/>},
                     {
-                        path: "/stuart/funding/:uuid", element: <FundingSubmissionDetail mode={"edit"} breadcrumbs={[
-                            {name: "Funding Submissions", url: "/stuart/funding/"},
-                            {name: "Detail"},
-                        ]}/>
+                      path: "/stuart/funding", element: <FundingSubmissionApprovalPage/>,
                     },
-
-                    {path: "/stuart/payments", element: <PaymentProofApproval/>},
+                    {
+                        path: "/stuart/funding/add", element: <MatchSponsorshipPage />,
+                    },
 
                     {path: "/stuart/children", element: <AllChildrenList/>},
                     {
@@ -248,10 +260,7 @@ const router = createBrowserRouter([
                         ]}/>
                     },
                     {path: "/school/children/:childUuid/report-cards/add", element: <AddEditReportCards mode={"add"}/>},
-                    {
-                        path: "/school/children/report-cards/:reportCardUuid/edit",
-                        element: <AddEditReportCards mode={"edit"}/>
-                    },
+                    {path: "/school/children/report-cards/:reportCardUuid/edit", element: <AddEditReportCards mode={"edit"}/>},
                 ]
             }
         ]
@@ -322,7 +331,7 @@ enableMocking().then(() => {
         <AuthProvider>
             <StrictMode>
                 <RouterProvider router={router}/>
-                <Toaster richColors/>
+                <Toaster richColors closeButton position={"top-center"} expand={true}/>
             </StrictMode>
         </AuthProvider>
     )

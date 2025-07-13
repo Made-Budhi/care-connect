@@ -8,7 +8,7 @@ function AuthenticationLayout() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (auth.accessToken) {
+        if (auth.session) {
             // Render dashboard based on a user role
             switch (auth.role) {
                 case 'sponsor':

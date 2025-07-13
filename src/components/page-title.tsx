@@ -14,7 +14,7 @@ interface Breadcrumbs {
 
 interface PageTitleProps extends Breadcrumbs{
     title: string;
-    breadcrumbs: Breadcrumbs[];
+    breadcrumbs?: Breadcrumbs[];
 }
 
 function PageTitle({title, breadcrumbs}: PageTitleProps) {
@@ -22,26 +22,28 @@ function PageTitle({title, breadcrumbs}: PageTitleProps) {
         <div className={"space-y-4"}>
             <h1 className={"text-2xl font-semibold lg:text-5xl lg:font-normal"}>{title}</h1>
 
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink href="/">Home</BreadcrumbLink>
-                    </BreadcrumbItem>
+            {breadcrumbs && (
+                <Breadcrumb>
+                    <BreadcrumbList>
+                        <BreadcrumbItem>
+                            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                        </BreadcrumbItem>
 
-                    {breadcrumbs.map((item, index) => (
-                        <React.Fragment key={index}>
-                            <BreadcrumbSeparator>/</BreadcrumbSeparator>
+                        {breadcrumbs?.map((item, index) => (
+                            <React.Fragment key={index}>
+                                <BreadcrumbSeparator>/</BreadcrumbSeparator>
 
-                            <BreadcrumbItem>
-                                <BreadcrumbLink href={item.url}
-                                                className={breadcrumbs.length - 1 === index ? "text-gray-800" : ""}>
-                                    {item.name}
-                                </BreadcrumbLink>
-                            </BreadcrumbItem>
-                        </React.Fragment>
-                    ))}
-                </BreadcrumbList>
-            </Breadcrumb>
+                                <BreadcrumbItem>
+                                    <BreadcrumbLink href={item.url}
+                                                    className={breadcrumbs.length - 1 === index ? "text-gray-800" : ""}>
+                                        {item.name}
+                                    </BreadcrumbLink>
+                                </BreadcrumbItem>
+                            </React.Fragment>
+                        ))}
+                    </BreadcrumbList>
+                </Breadcrumb>
+            )}
         </div>
     )
 }

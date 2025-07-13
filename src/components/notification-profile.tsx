@@ -1,23 +1,26 @@
-import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
+// import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
 import {Button} from "@/components/ui/button.tsx";
-import {Bell, User} from "lucide-react";
+import {User} from "lucide-react";
+import {UserProfileDialog} from "@/components/user-profile-dialog.tsx";
 
 function NotificationProfile() {
     return (
         <div className={"flex items-center"}>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant={"ghost"}><Bell /></Button>
-                </PopoverTrigger>
+            {/*<Popover>*/}
+            {/*    <PopoverTrigger asChild>*/}
+            {/*        <Button variant={"ghost"}><Bell /></Button>*/}
+            {/*    </PopoverTrigger>*/}
 
-                <PopoverContent>
-                    <h1>Notification</h1>
-                </PopoverContent>
-            </Popover>
+            {/*    <PopoverContent>*/}
+            {/*        <h1>Notification</h1>*/}
+            {/*    </PopoverContent>*/}
+            {/*</Popover>*/}
 
-            <Button variant={"ghost"}>
-                <User />
-            </Button>
+            <UserProfileDialog>
+                <Button variant={"ghost"}>
+                    <User />
+                </Button>
+            </UserProfileDialog>
         </div>
     )
 }

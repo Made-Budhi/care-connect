@@ -3,11 +3,12 @@
 import PageTitle from "@/components/page-title.tsx";
 import {useEffect, useState} from "react";
 import {useParams} from "react-router";
-import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import { DetailRow } from "@/components/detail-row";
+import {supabase} from "@/lib/supabaseClient.ts";
+import useAuth from "@/hooks/useAuth.tsx";
 
 interface Breadcrumbs {
     name?: string;
@@ -16,31 +17,37 @@ interface Breadcrumbs {
 
 // Interface for the detailed School entity from the mock API
 interface SchoolDetail {
-    uuid: string;
-    userUuid: string;
-    name: string;
-    region: string;
-    address: string;
-    latitude: number;
-    longitude: number;
+    address: string
+    created_at: string
+    deleted: boolean | null
+    id: string
+    latitude: number | null
+    longitude: number | null
+    manager_id: {
+        name: string | null;
+        email: string | null;
+    }
+    name: string
+    region: string | null
 }
 
 function SchoolDetailPage() {
     const [data, setData] = useState<SchoolDetail>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const axiosPrivate = useAxiosPrivate();
-
+    const {auth} = useAuth();
+    
     const { uuid } = useParams<{ uuid: string }>();
 
+    // TODO: create dynamic breadcrumbs
     const breadcrumbs: Breadcrumbs[] = [
-        { name: "School List", url: "/admin/schools" },
+        { name: "School List", url: `/${auth.role}/schools` },
         { name: "Detail" }
     ];
 
     useEffect(() => {
         if (!uuid) {
-            setError("School UUID is missing from the URL.");
+            setError("Cannot fetch school details. UUID is missing from the URL.");
             setLoading(false);
             return;
         }
@@ -48,22 +55,35 @@ function SchoolDetailPage() {
         const fetchSchoolDetail = async () => {
             setLoading(true);
             setError(null);
+
             try {
-                const response = await axiosPrivate.get(`/v1/schools/${uuid}`);
-                setData(response.data);
+                const {data, error} = await supabase
+                    .from('schools')
+                    .select('*, manager_id (name, email)')
+                    .eq('id', uuid)
+                    .single();
+
+                if (error) throw error;
+
+                setData(data);
             } catch (error) {
-                console.error("Failed to fetch school details:", error);
-                setError("Failed to load school data.");
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                setError(error.message);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSchoolDetail();
-    }, [uuid, axiosPrivate]);
+    }, [uuid]);
 
     // Component to render the interactive map
-    const SchoolMap = ({ lat, lon, name }: { lat: number, lon: number, name: string }) => {
+    const SchoolMap = ({ lat, lon, name }: { lat: number | null, lon: number | null, name: string }) => {
+        if (!lat || !lon) {
+            lat = 0
+            lon = 0
+        }
         // We construct an embeddable URL for OpenStreetMap.
         // The marker pinpoints the exact location.
         // The bbox (bounding box) defines the view area, creating a nice zoom level.
@@ -115,8 +135,8 @@ function SchoolDetailPage() {
             {data && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl">{data.name}</CardTitle>
-                        <CardDescription>{data.address}</CardDescription>
+                        <CardTitle className="text-2xl">{data?.name}</CardTitle>
+                        <CardDescription>{data?.address}</CardDescription>
                     </CardHeader>
                     <Separator />
                     <CardContent className="py-6 grid lg:grid-cols-2 gap-10">
@@ -124,23 +144,22 @@ function SchoolDetailPage() {
                         <div className="space-y-8">
                             <div className={"space-y-4"}>
                                 <h3 className="font-semibold text-lg">School Information</h3>
-                                <DetailRow label="School Name" value={data.name} />
-                                <DetailRow label="Region" value={data.region} />
-                                <DetailRow label="Full Address" value={data.address} />
+                                <DetailRow label="School Name" value={data?.name} />
+                                <DetailRow label="Region" value={data?.region} />
+                                <DetailRow label="Full Address" value={data?.address} />
                             </div>
 
                             <div className={"space-y-4"}>
                                 <h3 className="font-semibold text-lg">Administrative Details</h3>
-                                {/*TODO: Replace with manager's name*/}
-                                <DetailRow label="School Manager UUID" value={<span className="font-mono text-xs">{data.userUuid}</span>} />
-                                <DetailRow label="School UUID" value={<span className="font-mono text-xs">{data.uuid}</span>} />
+                                <DetailRow label="School Manager" value={<span>{data.manager_id?.name}</span>} />
+                                <DetailRow label="School Manager's E-mail" value={<span className={"underline"}>{data.manager_id?.email}</span>} />
                             </div>
                         </div>
 
                         {/* Right Column: Map */}
                         <div className="space-y-4">
                             <h3 className="font-semibold text-lg">Location</h3>
-                            <SchoolMap lat={data.latitude} lon={data.longitude} name={data.name} />
+                            <SchoolMap lat={data?.latitude} lon={data?.longitude} name={data.name} />
                         </div>
                     </CardContent>
                 </Card>

@@ -45,7 +45,7 @@ export function DataTableReportCard<TData, TValue>({ columns, data }: DataTableP
                 {/*Add a new submission button*/}
 
                 {auth.role === 'school' && (
-                    <Link to={`/school/children/${uuid}/report-card/add`} className={`${buttonVariants({variant: "ccbutton"})}`}>
+                    <Link to={`/school/children/${uuid}/report-cards/add`} className={`${buttonVariants({variant: "ccbutton"})}`}>
                         <Plus />
                         <p>NEW</p>
                     </Link>

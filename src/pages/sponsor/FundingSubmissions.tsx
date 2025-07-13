@@ -31,7 +31,6 @@ const breadcrumbs = [
 interface FundingSubmission {
     id: string;
     status: "pending" | "approved" | "rejected";
-    period: number;
     date_requested: string;
 }
 
@@ -62,14 +61,6 @@ const columns: ColumnDef<FundingSubmission>[] = [
             )
         },
         filterFn: "equals",
-    },
-    {
-        id: "period",
-        accessorKey: "period",
-        header: "Period",
-        cell: ({row}) => {
-            return <p>{row.getValue("period")} Year</p>
-        }
     },
     {
         id: "date_requested",
@@ -127,7 +118,7 @@ function FundingSubmissions() {
                 const { data: submissions, error } = await supabase
                     .from('funding_submissions')
                     // Select the specific columns needed for the list view
-                    .select('id, status, period, date_requested')
+                    .select('id, status, date_requested')
                     // Filter the results to only show submissions by the current user
                     .eq('sponsor_id', auth.uuid)
                     // Order by the most recently requested

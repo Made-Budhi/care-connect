@@ -1,3 +1,7 @@
+/**
+ * This file is not needed in this experimental branch
+ */
+
 import { useEffect, useState } from 'react';
 import { Outlet } from "react-router";
 import useRefreshToken from '../hooks/useRefreshToken';
@@ -29,7 +33,7 @@ const AuthInitializer = () => {
 
         // If we don't have an access token in memory, try to get one.
         // If we *do* have one (e.g., from client-side navigation), don't show a loader.
-        if (!auth?.accessToken) {
+        if (!auth?.session) {
             verifyRefreshToken();
         } else {
             setIsLoading(false);

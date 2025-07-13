@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import {
-    CreditCard,
+    // CreditCard,
     HandCoins,
     School,
     Users
@@ -14,17 +14,23 @@ import {
 import {Outlet} from "react-router";
 import {AppSidebar} from "@/layouts/sidebars/AppSidebar.tsx";
 import NotificationProfile from "@/components/notification-profile.tsx";
+import Footer from "@/components/ui/footer.tsx";
 
 const menus = [
+    // {
+    //     title: "Funding Applications",
+    //     url: "/stuart/funding",
+    //     icon: <HandCoins />
+    // },
+    // {
+    //     title: "Payment Verifications",
+    //     url: "/stuart/payments",
+    //     icon: <CreditCard />
+    // },
     {
-        title: "Funding Applications",
-        url: "/stuart/funding",
-        icon: <HandCoins />
-    },
-    {
-        title: "Payment Verifications",
-        url: "/stuart/payments",
-        icon: <CreditCard />
+      title: "Funding",
+      url: "/stuart/funding",
+      icon: <HandCoins />,
     },
     {
         title: "School List",
@@ -49,9 +55,11 @@ function StuartLayout() {
                     <NotificationProfile />
                 </div>
 
-                <div className="bg-cc-background p-3">
+                <div className="min-h-screen bg-cc-background p-3 mb-5">
                     <Outlet />
                 </div>
+
+                <Footer />
             </SidebarInset>
         </SidebarProvider>
     )

@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         // Get current session
         supabase.auth.getSession().then(({data: {session}}) => {
-            const uuid = session?.user?.user_metadata?.id ?? null;
+            const uuid = session?.user?.id ?? null;
             const role = session?.user?.user_metadata?.role ?? null;
             setAuth({session, uuid, role, loading: false})
         })
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Set up the listener for auth state changes.
         const {data: { subscription }} = supabase.auth.onAuthStateChange(
             (_event, session) => {
-                const uuid = session?.user?.user_metadata?.id  ?? null;
+                const uuid = session?.user?.id ?? null;
                 const role = session?.user?.user_metadata?.role ?? null;
                 setAuth({session, uuid, role, loading: false})
             }

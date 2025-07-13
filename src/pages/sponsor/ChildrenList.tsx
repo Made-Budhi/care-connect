@@ -1,5 +1,6 @@
 "use client"
 
+// import useAxiosPrivate from "@/hooks/useInterceptor.tsx";
 import {useEffect, useState} from "react";
 import LoadingSpinner from "@/components/loading-spinner.tsx";
 import {
@@ -18,12 +19,13 @@ import {DataTableChildren} from "@/components/data-table-children.tsx";
 import {Link} from "react-router";
 import PageTitle from "@/components/page-title.tsx";
 import {dateFormat} from "@/lib/utils.ts";
+// import {Badge} from "@/components/ui/badge.tsx";
 import {supabase} from "@/lib/supabaseClient.ts";
 
-const title = "Foster Child List"
+const title = "My Sponsored Children";
 const breadcrumbs = [
     {
-        name: "Foster Child List",
+        name: "My Children",
     },
 ]
 
@@ -35,48 +37,42 @@ interface Child {
     date_of_birth: string;
     schools: {
         name: string;
-    }[]
+    } | null
 }
 
 const columns: ColumnDef<Child>[] = [
     {
         id: "index",
-        accessorKey: "index",
         header: () => <div className={"text-center"}>#</div>,
         cell: ({row}) => <div className={"text-center"}>{row.index + 1}</div>
     },
     {
-        id: "name",
         accessorKey: "name",
         header: "Name",
     },
     {
-        id: "gender",
         accessorKey: "gender",
         header: "Gender",
         filterFn: "equals",
     },
     {
-        id: "school",
         accessorKey: "schools.name",
         header: "School",
         cell: ({ row }) => {
-            const school = row.original.schools?.[0]; // Get the first school in the array
-            return <div>{school?.name ?? 'N/A'}</div>;
+            const schoolName = row.original.schools?.name;
+            return <div>{schoolName ?? 'N/A'}</div>;
         }
     },
     {
-        id: "grade",
         accessorKey: "grade",
         header: "Grade",
         filterFn: "equals",
     },
     {
-        id: "date_of_birth",
         accessorKey: "date_of_birth",
         header: "Date of Birth",
         cell: ({ row }) => {
-            const date = row.getValue("birthdate") as string;
+            const date = row.getValue("date_of_birth") as string;
             return <div>{dateFormat(date)}</div>
         }
     },
@@ -114,7 +110,6 @@ const columns: ColumnDef<Child>[] = [
     }
 ]
 
-
 function ChildrenList() {
     const [data, setData] = useState<Child[]>([]);
     const [loading, setLoading] = useState(false);
@@ -123,19 +118,22 @@ function ChildrenList() {
 
     useEffect(() => {
         const fetchSponsoredChildren = async () => {
-            if (!auth.uuid) {
-                if (!auth.loading) setLoading(false);
+            if (!auth?.uuid) {
+                if (!auth?.loading) setLoading(false);
                 return;
             }
 
             setLoading(true);
+            setError(null);
 
             try {
-                // This query fetches funding submissions for the current sponsor
-                // and includes the data for the matched child and their school.
+                // --- REFACTORED: Fetching Logic ---
+                // 1. Fetch submissions including the start and end dates.
                 const { data: submissions, error } = await supabase
                     .from('funding_submissions')
                     .select(`
+                        start_date,
+                        end_date,
                         children:matched_child_id (
                             id,
                             name,
@@ -146,39 +144,53 @@ function ChildrenList() {
                         )
                     `)
                     .eq('sponsor_id', auth.uuid)
-                    .not('matched_child_id', 'is', null); // Only get submissions with a matched child
+                    .not('matched_child_id', 'is', null)
+                    .eq('status', 'approved');
 
                 if (error) throw error;
 
-                // Extract the children data from the submissions
-                const childrenData = submissions
-                    .map(sub => sub.children)
-                    .filter((child)=> {
-                        return child !== null;
-                    }); // Filter out any null children
+                // 2. Filter on the client-side using the explicit dates.
+                const today = new Date();
+                const activeChildren = submissions
+                    .filter(sub => {
+                        // Ensure we have the necessary data to perform the check
+                        if (!sub.children || !sub.start_date || !sub.end_date) {
+                            return false;
+                        }
 
-                setData(childrenData);
+                        const startDate = new Date(sub.start_date);
+                        const endDate = new Date(sub.end_date);
+
+                        // The sponsorship is active if today is between the start and end dates.
+                        return startDate <= today && today <= endDate;
+                    })
+                    .map(sub => sub.children); // Extract just the child data
+
+                setData(activeChildren as Child[]);
 
             } catch (error) {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
-                setError(error);
+                setError(error.message || "An error occurred while fetching your sponsored children.");
             } finally {
                 setLoading(false);
             }
         };
 
         fetchSponsoredChildren();
-    }, [auth.uuid, auth.loading]);
+    }, [auth?.uuid, auth?.loading]);
 
     return (
         <div className={"space-y-8"}>
             <PageTitle title={title} breadcrumbs={breadcrumbs}></PageTitle>
 
-            {data && <DataTableChildren columns={columns} data={data} />}
-
-            {loading && <div className={"h-full flex justify-center"}><LoadingSpinner /></div>}
-            {!loading && error && <div className={"h-full flex justify-center"}><p>{error}</p></div>}
+            {loading ? (
+                <div className={"h-full flex justify-center"}><LoadingSpinner /></div>
+            ) : error ? (
+                <div className={"h-full flex justify-center"}><p className="text-red-500">{error}</p></div>
+            ) : (
+                <DataTableChildren columns={columns} data={data} />
+            )}
         </div>
     )
 }

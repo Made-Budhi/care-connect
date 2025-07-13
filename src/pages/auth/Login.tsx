@@ -55,7 +55,6 @@ export function Login({className, ...props}: React.ComponentPropsWithoutRef<"for
         } catch (error) {
             toast.error(`${error}`)
         }
-
     }
 
     return (

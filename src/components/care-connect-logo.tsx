@@ -9,7 +9,7 @@ const CareConnect: React.FC<CareConnectProps> = ({ className = "" }) => {
     return (
         <Link to={"/"} className={`flex items-center gap-2 font-medium ${className}`}>
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                {/* Logo. TODO: Replace with CareConnect's logo */}
+                {/* Logo. TODO: Replace with CareConnect's logo (Bali School Kids Logo) */}
                 <GalleryVerticalEnd className="size-4" />
             </div>
             Care Connect

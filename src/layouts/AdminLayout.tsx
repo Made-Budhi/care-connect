@@ -12,6 +12,7 @@ import {
 import {Outlet} from "react-router";
 import {AppSidebar} from "@/layouts/sidebars/AppSidebar.tsx";
 import NotificationProfile from "@/components/notification-profile.tsx";
+import Footer from "@/components/ui/footer.tsx";
 
 const menus = [
     {
@@ -47,9 +48,11 @@ function AdminLayout() {
                     <NotificationProfile />
                 </div>
 
-                <div className="bg-cc-background p-3">
+                <div className="min-h-screen bg-cc-background p-3 mb-5">
                     <Outlet />
                 </div>
+
+                <Footer />
             </SidebarInset>
         </SidebarProvider>
     )
