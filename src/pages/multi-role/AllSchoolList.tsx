@@ -102,7 +102,7 @@ function SchoolListPage() {
                                         setOpenDialog(true)
                                         setSelectedSchoolId(school.id)
                                     }}>
-                                        Delete Achievement
+                                        Delete School
                                     </DropdownMenuItem>
                                 </>
                             )}
