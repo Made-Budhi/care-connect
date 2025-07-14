@@ -33,8 +33,8 @@ function AuthenticationLayout() {
     return (
         <div className="grid min-h-svh lg:grid-cols-2">
             {/* Image on the left */}
-            <div className="relative hidden bg-[url('/pictures/children.png')] bg-cover bg-center p-20
-            bg-black/80 bg-blend-multiply text-white lg:flex flex-col justify-between">
+            <div className="relative hidden bg-[url('/pictures/facebook-banner.png')] bg-cover bg-center p-20
+            bg-black/50 bg-blend-multiply text-white lg:flex flex-col justify-between">
 
                 <CareConnect />
 

@@ -19,11 +19,12 @@ import {
 } from "@/components/ui/sidebar"
 import {Link, NavLink, useLocation, useNavigate} from "react-router"
 import {type JSX} from "react"
-import {GalleryVerticalEnd, LogOut} from "lucide-react";
+import {LogOut} from "lucide-react";
 import useAuth from "@/hooks/useAuth.tsx";
 import {Separator} from "@/components/ui/separator.tsx";
 import useLogout from "@/hooks/useLogout.tsx";
 import {UserProfileDialog} from "@/components/user-profile-dialog.tsx";
+import CareConnect from "@/components/care-connect-logo.tsx";
 
 interface MenuItem {
     title: string;
@@ -63,15 +64,7 @@ export function AppSidebar({ menus, ...props }: AppSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground" variant={"outline"} asChild>
                         <Link to={"/"}>
-                            <div
-                                className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                                <GalleryVerticalEnd className="size-4"/>
-                            </div>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate text-lg font-semibold">
-                                  Care Connect
-                                </span>
-                            </div>
+                            <CareConnect />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenu>

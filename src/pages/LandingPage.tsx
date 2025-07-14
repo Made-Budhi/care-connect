@@ -1,6 +1,6 @@
 import {buttonVariants} from "@/components/ui/button.tsx";
 import {Link, useNavigate} from "react-router";
-import { useEffect } from "react";
+import {useEffect, useState} from "react";
 import Navbar from "@/components/ui/navbar";
 import ImageCarousel from "@/components/ui/imagecarousel";
 import HeroCarousel from "@/components/ui/imagecarouselhome.tsx";
@@ -8,11 +8,70 @@ import CountUp from "@/components/ui/countupprops";
 import UseIntersectionObserver from "@/components/ui/intersectionobserver";
 import TestimonialCarousel from "@/components/ui/testimonial-carousel-effect";
 import Footer from "@/components/ui/footer";
+import {supabase} from "@/lib/supabaseClient.ts";
 
+interface NewsArticle extends News {
+    display_picture_url: string | null;
+}
+
+interface News {
+    id: string;
+    title: string;
+    created_at: string;
+    picture_url: string | null;
+    description: string;
+    author_id: {
+        id: string;
+        name: string;
+    }
+}
 
 function LandingPage() {
+    const [news, setNews] = useState<NewsArticle[]>([]);
+    const [newsError, setNewsError] = useState<string | null>(null);
+
+    const fetchNews = async () => {
+        try {
+            const {data: articles, error} = await supabase
+                .from('news')
+                .select('*, author_id (id, name)')
+                .order('id', {ascending: false}).limit(3);
+
+            if (error) throw error
+
+            setNews(articles);
+
+            const articlesWithSignedUrls = await Promise.all(
+                (articles || []).map(async (article) => {
+                    let display_picture_url = "https://placehold.co/600x400?text=No+Image";
+                    if (article.picture_url) {
+                        const { data: signedUrlData, error: urlError } = await supabase
+                            .storage
+                            .from('news')
+                            .createSignedUrl(article.picture_url, 3600); // URL valid for 1 hour
+
+                        if (urlError) {
+                            display_picture_url = "https://placehold.co/600x400?text=Image+Error"
+                        } else {
+                            display_picture_url = signedUrlData.signedUrl;
+                        }
+                    }
+                    return { ...article, display_picture_url };
+                })
+            );
+
+            setNews(articlesWithSignedUrls);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setNewsError(error.message);
+
+        }
+    }
+
     useEffect(() =>{
         document.title = 'Bali School Kids | Home';
+        fetchNews();
     }, []);
 
     const navigate = useNavigate();
@@ -24,7 +83,7 @@ function LandingPage() {
 
     return (
     <>
-    <div className="min-h-screen flex flex-col">  
+    <div className="min-h-screen flex flex-col">
         <Navbar onNavigate={handleNavigation}></Navbar>
         {/* Main */}
         <main className="flex-grow">
@@ -113,12 +172,12 @@ function LandingPage() {
                                 <img src="/pictures/open-book.png" alt="Education" className="h-12 mb-4" />
                                 <div className="mt-2 pt-2 flex flex-col">
                                     <h3 className="font-bold text-lg">Education</h3>
-                                    <p className="text-sm">Support growth through learning.</p>  
+                                    <p className="text-sm">Support growth through learning.</p>
                                 </div>
                             </div>
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/connection.png" alt="Connection" className="h-12 mb-4" />
-                                <div className="mt-2 pt-2 flex flex-col">     
+                                <div className="mt-2 pt-2 flex flex-col">
                                     <h3 className="font-bold text-lg">Connection</h3>
                                     <p className="text-sm">Meaningful sponsor-child relationships.</p>
                                 </div>
@@ -127,14 +186,14 @@ function LandingPage() {
                                 <img src="/pictures/eye.png" alt="Transparency" className="h-10 mb-4" />
                                 <div className="mt-4 pt-2 flex flex-col">
                                     <h3 className="font-bold text-lg">Transparency</h3>
-                                    <p className="text-sm">Clear, real-time child updates.</p>                                   
+                                    <p className="text-sm">Clear, real-time child updates.</p>
                                 </div>
                             </div>
                             <div className="flex flex-col items-center text-center">
                                 <img src="/pictures/socialsupport.png" alt="Local Communities" className="h-12 mb-4" />
                                 <div className="mt-2 pt-2 flex flex-col">
                                     <h3 className="font-bold text-lg">Local Communities</h3>
-                                    <p className="text-sm">Support from local communities.</p>                                  
+                                    <p className="text-sm">Support from local communities.</p>
                                 </div>
                             </div>
                         </div>
@@ -182,120 +241,44 @@ function LandingPage() {
             </section>
 
             {/* Our Program Section */}
-            <section id="program" className="py-16 px-6 bg-white">
+            <section id="news" className="py-16 px-6 bg-white">
                 <div className="mx-6">
                     <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-3xl font-bold">Our Program</h2>
-                        <Link to="/programs" className="px-4 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors">more</Link>
+                        <h2 className="text-3xl font-bold">Latest</h2>
+                        {/*<Link to="/programs" className="px-4 py-1 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition-colors">more</Link>*/}
                     </div>
 
-                    {/* First Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img1.png" alt="After School Enrichment" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">After School Enrichment</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Creating safe and engaging spaces for learning beyond the classroom. This program funds extracurricular activities, tutoring, and mentorship opportunities.
-                                    </p>
-                                </div>
-                                <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
-                        </div>
+                    {newsError && (
+                        <div className="flex justify-center items-center">${newsError}</div>
+                    )}
 
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img2.png" alt="Future Scholars Fund" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">Future Scholars Fund</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Supporting high-achieving students to pursue higher education. We offer scholarships for outstanding students with limited financial means.
-                                    </p>
-                                </div>
-                                <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
-                        </div>
+                    {news.length === 0 && (
+                        <div className="flex justify-center items-center">No articles</div>
+                    )}
 
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img3.png" alt="School Starter Pack" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">School Starter Pack</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Providing essential supplies to help children begin their academic journey with confidence. From backpacks to notebooks, this program equips students for success.
-                                    </p>
+                    {news.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            {news.map((article) => (
+                                <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
+                                    <div className="h-48 overflow-hidden">
+                                        <img src={article.display_picture_url || "https://placehold.co/600x400?text=No+Imagehttps://placehold.co/600x400?text=No+Image"}
+                                             alt={article.title} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="p-5 flex flex-col flex-grow">
+                                        <div className="flex-grow">
+                                            <h3 className="font-bold text-xl mb-2">{article.title}</h3>
+                                            <p className="text-gray-600 text-sm max-h-[100px] overflow-hidden text-ellipsis">
+                                                {article.description}
+                                            </p>
+                                        </div>
+                                        <div className="mt-6 pt-2 flex flex-col">
+                                            <Link to={`/news/${article.id}`} className={buttonVariants({ variant: "default" })}>View Details</Link>
+                                        </div>
+                                    </div>
                                 </div>
-                               <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-                    </div>
-
-                    {/* Second Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img1.png" alt="After School Enrichment" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">After School Enrichment</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Creating safe and engaging spaces for learning beyond the classroom. This program funds extracurricular activities, tutoring, and mentorship opportunities.
-                                    </p>
-                                </div>
-                                <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img2.png" alt="Future Scholars Fund" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">Future Scholars Fund</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Supporting high-achieving students to pursue higher education. We offer scholarships for outstanding students with limited financial means.
-                                    </p>
-                                </div>
-                                <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-lg overflow-hidden shadow flex flex-col h-full">
-                            <div className="h-48 overflow-hidden">
-                                <img src="/pictures/Img3.png" alt="School Starter Pack" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex-grow">
-                                    <h3 className="font-bold text-xl mb-2">School Starter Pack</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Providing essential supplies to help children begin their academic journey with confidence. From backpacks to notebooks, this program equips students for success.
-                                    </p>
-                                </div>
-                                <div className="mt-6 pt-2 flex flex-col">
-                                    <Link to={"#"} className={buttonVariants({ variant: "default" })}>View Details</Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </section>
 
@@ -328,7 +311,7 @@ function LandingPage() {
 
         {/* Footer Section */}
         <Footer />
-    </div>    
+    </div>
     </>
     );
 }

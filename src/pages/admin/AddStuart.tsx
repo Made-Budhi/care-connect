@@ -51,6 +51,7 @@ function AddStuart() {
     }, []);
 
     const onSubmit = async (data: AddStuartFormValues) => {
+        console.log(data)
         setIsSubmitting(true);
         setError(null);
 

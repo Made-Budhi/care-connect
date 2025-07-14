@@ -6,12 +6,14 @@ import {
     useReactTable
 } from "@tanstack/react-table";
 import {useState} from "react";
-import {Plus, Search} from "lucide-react";
+import {
+    // Plus,
+    Search} from "lucide-react";
 import {Input} from "@/components/ui/input.tsx";
-import {buttonVariants} from "@/components/ui/button.tsx";
+// import {buttonVariants} from "@/components/ui/button.tsx";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table.tsx";
-import {Link} from "react-router";
-import useAuth from "@/hooks/useAuth.tsx";
+// import {Link} from "react-router";
+// import useAuth from "@/hooks/useAuth.tsx";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -19,7 +21,7 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTableStuart<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
-    const {auth} = useAuth();
+    // const {auth} = useAuth();
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
 

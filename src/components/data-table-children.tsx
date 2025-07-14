@@ -5,7 +5,8 @@ import {
     getFilteredRowModel,
     useReactTable
 } from "@tanstack/react-table";
-import {useState} from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {useRef, useState} from "react";
 import {ListFilter, Plus, Search, X} from "lucide-react";
 import {Input} from "@/components/ui/input.tsx";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover.tsx";
@@ -23,8 +24,10 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTableChildren<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+    const tableContainerRef = useRef<HTMLDivElement>(null);
     const {auth} = useAuth();
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+
 
     const isFilterActive = (columnId: string) => !!table.getColumn(columnId)?.getFilterValue();
 
@@ -38,6 +41,17 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
             columnFilters,
         },
     })
+
+    const {rows} = table.getRowModel();
+
+    const rowVirtualizer = useVirtualizer({
+        count: rows.length,
+        getScrollElement: () => tableContainerRef.current,
+        // Set a fixed estimate for row height
+        estimateSize: () => 52,
+        // Render a few extra items for smoother scrolling
+        overscan: 5,
+    });
 
     return (
         <div className={"space-y-3"}>
@@ -161,13 +175,15 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
                 </Popover>
             </section>
 
-            <div className={"bg-white p-2 rounded-sm border"}>
-                <Table>
-                    <TableHeader>
+            <div className={"bg-white p-2 rounded-sm border relative overflow-auto"}
+                 ref={tableContainerRef}
+                 style={{ height: `600px` }}>
+                <Table className={"table-fixed w-full"}>
+                    <TableHeader className="sticky top-0 z-10 bg-white">
                         {table.getHeaderGroups().map(headerGroup => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map(header => (
-                                    <TableHead key={header.id} className={"border-r"}>
+                                    <TableHead key={header.id} className="border-r" style={{ width: `${header.getSize()}px` }}>
                                         {header.isPlaceholder ? null : flexRender(
                                             header.column.columnDef.header,
                                             header.getContext()
@@ -179,26 +195,41 @@ export function DataTableChildren<TData, TValue>({ columns, data }: DataTablePro
                     </TableHeader>
 
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    className={"odd:bg-gray-50"}
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className={"border-r"}>
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
+                        {rows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={columns.length} className="h-24 text-center">
                                     No results.
                                 </TableCell>
                             </TableRow>
+                        ) : (
+                            <>
+                                {/* Top padding */}
+                                <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px` }} />
+
+                                {/* Virtual rows */}
+                                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const row = rows[virtualRow.index];
+                                    return (
+                                        <TableRow key={row.id} className="odd:bg-gray-50">
+                                            {row.getVisibleCells().map((cell) => (
+                                                <TableCell key={cell.id} style={{ width: `${cell.column.getSize()}px` }} className={"border-r overflow-hidden text-ellipsis whitespace-nowrap"}>
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    );
+                                })}
+
+                                {/* Bottom padding */}
+                                <tr
+                                    style={{
+                                        height: `${
+                                            rowVirtualizer.getTotalSize() -
+                                            (rowVirtualizer.getVirtualItems().at(-1)?.end ?? 0)
+                                        }px`,
+                                    }}
+                                />
+                            </>
                         )}
                     </TableBody>
                 </Table>
